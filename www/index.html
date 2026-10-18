@@ -1,0 +1,3799 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CodeQuest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#060a13" />
+  <title>CodeQuest — Learn Programming One Language at a Time</title>
+  <!-- Tailwind CSS -->
+  <link rel="stylesheet" href="vendor/tailwind.css">
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="vendor/fa/all.min.css" />
+  <!-- Pyodide (In-Browser Python Execution) -->
+  <script src="pyodide/pyodide.js" defer></script>
+
+  
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    body {
+      background-color: #060a13;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+    .code-font {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Subtle background grid */
+    .bg-grid-pattern {
+      background-image: radial-gradient(rgba(99, 102, 241, 0.12) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    /* Animations */
+    @keyframes popIn {
+      0% { transform: scale(0.92); opacity: 0; }
+      70% { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); }
+      50% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+    }
+    .animate-pop {
+      animation: popIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-float {
+      animation: floatSlow 3s ease-in-out infinite;
+    }
+    .pulse-ring {
+      animation: pulseGlow 2.2s infinite;
+    }
+    .btn-game {
+      transition: transform 0.1s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    .btn-game:active:not(:disabled) {
+      transform: translateY(2px);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-950 bg-grid-pattern text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <header class="sticky top-0 z-30 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80">
+    <div class="max-w-5xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
+      <!-- Brand Logo -->
+      <button onclick="app.navigate('home')" class="flex items-center gap-2.5 text-left group focus:outline-none">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
+          <i class="fa-solid fa-terminal text-white text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-indigo-100 to-indigo-300 bg-clip-text text-transparent">CodeQuest</span>
+            <span id="header-lang-pill" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Python</span>
+          </div>
+          <p class="text-[11px] text-slate-400 hidden sm:block">One language at a time • AI-powered mastery</p>
+        </div>
+      </button>
+
+      <!-- Player Stats Bar -->
+      <div class="flex items-center gap-1.5 sm:gap-3">
+        <!-- Streak -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs sm:text-sm font-semibold" title="Daily Streak">
+          <i class="fa-solid fa-fire text-amber-400"></i>
+          <span id="stat-streak">1</span>
+        </div>
+
+        <!-- XP & Player Level -->
+        <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs sm:text-sm font-semibold" title="Experience Points">
+          <i class="fa-solid fa-bolt text-indigo-400"></i>
+          <span id="stat-xp">0 XP</span>
+          <span id="stat-player-lvl" class="hidden md:inline-block text-[11px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">Lv 1</span>
+        </div>
+
+        <!-- Hearts -->
+        <button onclick="app.openHeartsModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-xs sm:text-sm font-semibold transition-colors" title="Hearts (refill over time)">
+          <i class="fa-solid fa-heart text-rose-500"></i>
+          <span id="stat-hearts">5</span>
+          <span id="stat-heart-timer" class="text-[10px] text-slate-400 font-mono hidden sm:inline"></span>
+        </button>
+
+        <!-- Install as Native-Style App (PWA / APK Guide) -->
+        <button id="install-app-btn" onclick="app.openInstallModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-colors" title="Install CodeQuest as an App">
+          <i class="fa-solid fa-download text-xs"></i>
+          <span class="hidden sm:inline">Install App</span>
+        </button>
+
+        <!-- Settings / Reset / API Key -->
+        <button onclick="app.openResetModal()" class="p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors" title="Settings & Export Config">
+          <i class="fa-solid fa-gear text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-view" class="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-6 py-5 pb-24 md:pb-10">
+    <!-- Dynamic views injected by CodeQuestApp -->
+  </main>
+
+  <!-- Bottom / Desktop Navigation Bar -->
+  <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/90">
+    <div class="max-w-lg mx-auto px-4 h-16 flex items-center justify-around">
+      <button onclick="app.navigate('home')" data-nav="home" class="nav-btn flex flex-col items-center justify-center gap-1 w-20 py-1.5 rounded-xl text-indigo-400 font-semibold transition-colors">
+        <i class="fa-solid fa-map-location-dot text-lg"></i>
+        <span class="text-[11px]">Quest Map</span>
+      </button>
+      <button onclick="app.navigate('levels')" data-nav="levels" class="nav-btn flex flex-col items-center justify-center gap-1 w-20 py-1.5 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition-colors">
+        <i class="fa-solid fa-layer-group text-lg"></i>
+        <span class="text-[11px]">Levels</span>
+      </button>
+      <button onclick="app.navigate('review')" data-nav="review" class="nav-btn relative flex flex-col items-center justify-center gap-1 w-20 py-1.5 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition-colors">
+        <i class="fa-solid fa-rotate text-lg"></i>
+        <span class="text-[11px]">Review</span>
+        <span id="review-badge" class="hidden absolute top-1 right-4 w-2 h-2 rounded-full bg-emerald-400"></span>
+      </button>
+      <button onclick="app.navigate('badges')" data-nav="badges" class="nav-btn flex flex-col items-center justify-center gap-1 w-20 py-1.5 rounded-xl text-slate-400 hover:text-slate-200 font-medium transition-colors">
+        <i class="fa-solid fa-award text-lg"></i>
+        <span class="text-[11px]">Badges</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Universal Modal Container -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div id="modal-content" class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop"></div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Celebration Confetti Canvas -->
+  <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-40 hidden"></canvas>
+
+  <script>
+    /********************************************************************
+     * 1. CENTRALIZED CONFIGURATION (SINGLE SOURCE OF TRUTH)
+     * Keep model name and learning order in one place for easy updates.
+     ********************************************************************/
+    const GEMINI_MODEL = "gemini-3-flash-preview";
+    const apiKey = ""; // Environment-injected key; can also be overridden in Settings when exported
+
+    const CONFIG = {
+      model: GEMINI_MODEL,
+      passThreshold: 0.8, // 80% required to unlock next level or pass Final Exam
+      maxHearts: 5,
+      heartRefillMs: 15 * 60 * 1000, // 15 minutes per heart
+      dailyGoal: {
+        targetChallenges: 3,
+        targetReviewSets: 1,
+        estimatedMinutes: 15
+      },
+
+      /**
+       * LEARNING ORDER:
+       * 1. Python  2. C  3. SQL  4. JavaScript  5. TypeScript
+       * 6. C++  7. Rust  8. Go  9. Bash
+       *
+       * Adding or activating a language later only requires editing its config
+       * entry and promptTemplate here—no new application logic is needed.
+       */
+      languages: [
+        {
+          id: "python",
+          order: 1,
+          name: "Python",
+          icon: "fa-brands fa-python",
+          accent: "indigo",
+          playableByDefault: true,
+          executionMode: "pyodide",
+          aiEraWhy: "The lingua franca of AI, machine learning, automation, and LLM orchestration.",
+          promptTemplate: `You are designing bite-sized interactive Python 3 coding challenges for CodeQuest.
+Focus on clean, idiomatic Python 3 syntax. Keep code snippets short (3-8 lines).
+Ensure all Predict-the-Output questions have deterministic output and that Write-It tasks can be tested with simple Python 'assert' statements.`,
+          levels: [
+            { number: 1, title: "Variables & Print", topic: "Variables, strings, numbers, and print()" },
+            { number: 2, title: "Math & Types", topic: "Arithmetic operators, int/float/str conversions, type()" },
+            { number: 3, title: "String Alchemy", topic: "f-strings, indexing, slicing, and .lower()/.strip()" },
+            { number: 4, title: "Boolean Logic", topic: "Comparisons (==, !=, <, >) and logical operators (and, or, not)" },
+            { number: 5, title: "Branching Paths", topic: "if, elif, and else conditional statements" },
+            { number: 6, title: "While Loops", topic: "while loops, counters, break, and avoiding infinite loops" },
+            { number: 7, title: "For Loops & Range", topic: "for loops, range(start, stop, step), and iteration" },
+            { number: 8, title: "Reusable Functions", topic: "def, parameters, return values, and default arguments" },
+            { number: 9, title: "Lists & Mutation", topic: "Lists, indexing, .append(), .pop(), and len()" },
+            { number: 10, title: "List Slicing & Comprehensions", topic: "Slicing [a:b] and concise list comprehensions" },
+            { number: 11, title: "Dictionaries", topic: "Key-value pairs, .get(), .items(), and dictionary updates" },
+            { number: 12, title: "Tuples & Sets", topic: "Immutable unpacking with tuples and deduplicating with sets" },
+            { number: 13, title: "Error Shielding", topic: "try, except, catching ValueError/ZeroDivisionError gracefully" },
+            { number: 14, title: "Files & Contexts", topic: "Reading/writing text patterns, string lines, and with-context concepts" },
+            { number: 15, title: "Classes & Objects", topic: "class definitions, __init__, self attributes, and methods" }
+          ]
+        },
+        {
+          id: "c",
+          order: 2,
+          name: "C",
+          icon: "fa-solid fa-microchip",
+          accent: "sky",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Teaches raw memory, pointers, and how hardware actually executes under high-speed AI kernels.",
+          promptTemplate: `You are designing C (C11) programming challenges for CodeQuest.
+Emphasize pointers, stack vs heap memory, arrays, printf format specifiers, and structs. Keep snippets concise (4-10 lines).`,
+          levels: [
+            { number: 1, title: "Hello C & printf", topic: "main(), printf format specifiers (%d, %s, %f)" },
+            { number: 2, title: "Types & Sizes", topic: "int, char, float, double, and sizeof()" },
+            { number: 3, title: "Control Flow", topic: "if/else, switch, and ternary operators in C" },
+            { number: 4, title: "Loops in C", topic: "for, while, do-while, and increment operators (++i vs i++)" },
+            { number: 5, title: "Functions & Prototypes", topic: "Function declarations, pass-by-value, and return types" },
+            { number: 6, title: "Arrays & Bounds", topic: "Fixed-size arrays, indexing, and out-of-bounds dangers" },
+            { number: 7, title: "C Strings", topic: "Null-terminated char arrays ('\\0'), strlen, and strcmp" },
+            { number: 8, title: "Pointer Basics", topic: "Address-of (&) and dereference (*) operators" },
+            { number: 9, title: "Pointer Arithmetic", topic: "Pointers and arrays, stepping through memory addresses" },
+            { number: 10, title: "Pass by Pointer", topic: "Mutating caller variables via pointer parameters" },
+            { number: 11, title: "Dynamic Memory", topic: "malloc, calloc, free, and preventing memory leaks" },
+            { number: 12, title: "Structs", topic: "struct definitions, dot (.) and arrow (->) member access" },
+            { number: 13, title: "Preprocessor & Macros", topic: "#include, #define constants, and header guards" },
+            { number: 14, title: "File I/O", topic: "FILE pointers, fopen, fgets, fprintf, and fclose" },
+            { number: 15, title: "Bitwise Operations", topic: "Bitwise AND, OR, XOR, shifts (<<, >>), and bitmasks" }
+          ]
+        },
+        {
+          id: "sql",
+          order: 3,
+          name: "SQL",
+          icon: "fa-solid fa-database",
+          accent: "emerald",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Every AI pipeline and product depends on querying, joining, and cleaning structured data.",
+          promptTemplate: `You are designing ANSI SQL challenges for CodeQuest.
+Use clear schema examples (e.g., users, orders, events tables). Keep queries readable and practical.`,
+          levels: [
+            { number: 1, title: "SELECT & Columns", topic: "SELECT, column aliases (AS), and DISTINCT" },
+            { number: 2, title: "Filtering with WHERE", topic: "WHERE clauses, =, !=, AND, OR, and BETWEEN" },
+            { number: 3, title: "Pattern Matching", topic: "LIKE, ILIKE, IN, and handling NULL with IS NULL" },
+            { number: 4, title: "Sorting & Paging", topic: "ORDER BY ASC/DESC, LIMIT, and OFFSET" },
+            { number: 5, title: "Aggregations", topic: "COUNT, SUM, AVG, MIN, and MAX" },
+            { number: 6, title: "Grouping Data", topic: "GROUP BY and filtering aggregates with HAVING" },
+            { number: 7, title: "INNER JOIN", topic: "Joining related tables with INNER JOIN ... ON" },
+            { number: 8, title: "LEFT & OUTER JOINs", topic: "Preserving unmatched rows with LEFT JOIN and COALESCE" },
+            { number: 9, title: "Subqueries", topic: "Scalar and IN subqueries in WHERE and SELECT" },
+            { number: 10, title: "Common Table Expressions", topic: "Readable multi-step queries using WITH (CTEs)" },
+            { number: 11, title: "CASE Expressions", topic: "Conditional logic inside SQL with CASE WHEN ... THEN" },
+            { number: 12, title: "Window Functions I", topic: "OVER(PARTITION BY ...), ROW_NUMBER(), and RANK()" },
+            { number: 13, title: "Window Functions II", topic: "Running totals and LAG() / LEAD() comparisons" },
+            { number: 14, title: "Modifying Data", topic: "INSERT INTO, UPDATE ... WHERE, and safe DELETEs" },
+            { number: 15, title: "Tables & Indexes", topic: "CREATE TABLE, PRIMARY KEY, FOREIGN KEY, and INDEX basics" }
+          ]
+        },
+        {
+          id: "javascript",
+          order: 4,
+          name: "JavaScript",
+          icon: "fa-brands fa-js",
+          accent: "amber",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Powers interactive web interfaces, full-stack AI apps, and browser-side experiences.",
+          promptTemplate: `You are designing modern ES2022+ JavaScript challenges for CodeQuest.
+Focus on const/let, arrow functions, array methods, objects, and async/await.`,
+          levels: [
+            { number: 1, title: "let, const & Values", topic: "let vs const, template literals, and console.log" },
+            { number: 2, title: "Strict Equality", topic: "=== vs ==, truthy and falsy values" },
+            { number: 3, title: "Arrow Functions", topic: "Function declarations vs arrow functions (=>)" },
+            { number: 4, title: "Objects & Destructuring", topic: "Object literals, property shorthand, and destructuring" },
+            { number: 5, title: "Arrays & Spread", topic: "Array basics, push/slice, and spread (...) operator" },
+            { number: 6, title: "Map, Filter & Reduce", topic: "Functional array transformations (.map, .filter, .reduce)" },
+            { number: 7, title: "Closures & Scope", topic: "Lexical scope and closures that remember state" },
+            { number: 8, title: "Optional Chaining", topic: "Safe access with ?. and nullish coalescing (??)" },
+            { number: 9, title: "Callbacks & Timers", topic: "Higher-order functions and asynchronous callbacks" },
+            { number: 10, title: "Promises", topic: "Promise states, .then(), .catch(), and Promise.all" },
+            { number: 11, title: "Async / Await", topic: "Writing clean async code with async/await and try/catch" },
+            { number: 12, title: "DOM & Events", topic: "Selecting elements, event listeners, and state updates" },
+            { number: 13, title: "Fetch & JSON", topic: "JSON.parse, JSON.stringify, and HTTP fetch patterns" },
+            { number: 14, title: "Classes & Prototypes", topic: "ES6 class syntax, constructors, and methods" },
+            { number: 15, title: "Modules & Patterns", topic: "import/export and clean modular architecture" }
+          ]
+        },
+        {
+          id: "typescript",
+          order: 5,
+          name: "TypeScript",
+          icon: "fa-solid fa-code",
+          accent: "blue",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Catches bugs at compile time and gives AI coding assistants rock-solid type contracts.",
+          promptTemplate: `You are designing TypeScript challenges for CodeQuest.
+Highlight type annotations, interfaces, union types, type narrowing, and generics.`,
+          levels: [
+            { number: 1, title: "Basic Type Annotations", topic: "string, number, boolean, and type inference" },
+            { number: 2, title: "Typed Arrays & Tuples", topic: "number[], readonly arrays, and fixed-length tuples" },
+            { number: 3, title: "Function Signatures", topic: "Parameter types, return types, and optional parameters (?)" },
+            { number: 4, title: "Interfaces & Type Aliases", topic: "interface vs type, readonly properties" },
+            { number: 5, title: "Union & Literal Types", topic: "Union types (A | B) and string literal unions" },
+            { number: 6, title: "Type Narrowing", topic: "typeof, in operator, and truthiness narrowing" },
+            { number: 7, title: "Discriminated Unions", topic: "Exhaustive state handling with tagged unions" },
+            { number: 8, title: "Generics Basics", topic: "Generic functions <T> and reusable containers" },
+            { number: 9, title: "Generic Constraints", topic: "<T extends ...> and keyof constraints" },
+            { number: 10, title: "Utility Types", topic: "Partial<T>, Pick<T>, Omit<T>, and Record<K, V>" },
+            { number: 11, title: "unknown vs any", topic: "Safe runtime checking with unknown vs unsafe any" },
+            { number: 12, title: "Type Predicates", topic: "Custom type guards (val is User)" },
+            { number: 13, title: "Classes & Access Modifiers", topic: "public, private, protected, and implements" },
+            { number: 14, title: "Async Types", topic: "Promise<T> and typed API responses" },
+            { number: 15, title: "Mapped & Conditional Types", topic: "Advanced type transformations" }
+          ]
+        },
+        {
+          id: "cpp",
+          order: 6,
+          name: "C++",
+          icon: "fa-solid fa-cubes",
+          accent: "purple",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Drives inference engines (llama.cpp, TensorRT), robotics, game engines, and high-frequency systems.",
+          promptTemplate: `You are designing modern C++ (C++17/20) challenges for CodeQuest.
+Focus on std::vector, std::string, references, RAII, smart pointers, and STL algorithms.`,
+          levels: [
+            { number: 1, title: "Streams & Auto", topic: "std::cout, std::string, and auto type deduction" },
+            { number: 2, title: "References vs Pointers", topic: "Lvalue references (&), const references, and safety" },
+            { number: 3, title: "std::vector Mastery", topic: "push_back, emplace_back, size(), and range-based for" },
+            { number: 4, title: "Classes & RAII", topic: "Constructors, destructors, and deterministic cleanup" },
+            { number: 5, title: "std::map & unordered_map", topic: "Associative containers and fast key lookups" },
+            { number: 6, title: "Smart Pointers", topic: "std::unique_ptr, std::make_unique, and std::shared_ptr" },
+            { number: 7, title: "Move Semantics", topic: "std::move, rvalue references (&&), avoiding copies" },
+            { number: 8, title: "Lambdas", topic: "Lambda expressions, capture lists [=, &], and callbacks" },
+            { number: 9, title: "STL Algorithms", topic: "std::sort, std::find_if, and std::accumulate" },
+            { number: 10, title: "Templates", topic: "Function and class templates for zero-cost generics" },
+            { number: 11, title: "Operator Overloading", topic: "Customizing ==, +, and << on user types" },
+            { number: 12, title: "Inheritance & Virtual", topic: "virtual methods, override, and polymorphism" },
+            { number: 13, title: "std::optional & variant", topic: "Expressive value types without null pointers" },
+            { number: 14, title: "Constexpr & Compile-Time", topic: "constexpr functions and compile-time evaluation" },
+            { number: 15, title: "Concurrency Basics", topic: "std::thread, std::mutex, and std::lock_guard" }
+          ]
+        },
+        {
+          id: "rust",
+          order: 7,
+          name: "Rust",
+          icon: "fa-solid fa-gear",
+          accent: "orange",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Guarantees memory and thread safety without garbage collection for ultra-fast AI tooling.",
+          promptTemplate: `You are designing Rust (2021 edition) challenges for CodeQuest.
+Focus on ownership, borrowing, Option/Result pattern matching, structs, and iterators.`,
+          levels: [
+            { number: 1, title: "let & Mutability", topic: "Immutable by default, let mut, and println!()" },
+            { number: 2, title: "Ownership Rules", topic: "Move semantics vs Copy types on the stack and heap" },
+            { number: 3, title: "Borrowing & References", topic: "Shared (&T) vs mutable (&mut T) references" },
+            { number: 4, title: "Slices & Strings", topic: "String vs &str slices and safe indexing" },
+            { number: 5, title: "Structs & impl", topic: "Defining structs, methods, and associated functions" },
+            { number: 6, title: "Enums & Pattern Matching", topic: "Algebraic enums and exhaustive match expressions" },
+            { number: 7, title: "Option<T>", topic: "Handling absence safely with Some, None, and if let" },
+            { number: 8, title: "Result<T, E> & ?", topic: "Recoverable error handling and the ? operator" },
+            { number: 9, title: "Vectors & HashMaps", topic: "Vec<T>, vec![], and HashMap entry API" },
+            { number: 10, title: "Iterators & Closures", topic: ".iter(), .map(), .filter(), and .collect()" },
+            { number: 11, title: "Traits & Generics", topic: "Defining shared behavior with trait bounds" },
+            { number: 12, title: "Lifetimes Basics", topic: "Understanding 'a lifetime annotations on references" },
+            { number: 13, title: "Smart Pointers", topic: "Box<T>, Rc<T>, and RefCell<T>" },
+            { number: 14, title: "Fearless Concurrency", topic: "Threads, Arc<Mutex<T>>, and message passing" },
+            { number: 15, title: "Testing & Cargo Patterns", topic: "#[test], assert_eq!, and idiomatic Rust APIs" }
+          ]
+        },
+        {
+          id: "go",
+          order: 8,
+          name: "Go",
+          icon: "fa-brands fa-golang",
+          accent: "cyan",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "The backbone of cloud infrastructure, microservices, and high-concurrency AI agent backends.",
+          promptTemplate: `You are designing idiomatic Go (Golang) challenges for CodeQuest.
+Emphasize slices, maps, explicit error returns, structs, interfaces, and goroutines/channels.`,
+          levels: [
+            { number: 1, title: "Packages & Short Declarations", topic: "package main, fmt.Println, and := syntax" },
+            { number: 2, title: "Functions & Multiple Returns", topic: "Returning (val, err) tuples from functions" },
+            { number: 3, title: "For: Go's Only Loop", topic: "Classic for, while-style for, and for-range loops" },
+            { number: 4, title: "Slices & append", topic: "Slices, make(), len vs cap, and append()" },
+            { number: 5, title: "Maps", topic: "map[K]V literals, comma-ok idiom (val, ok := m[k])" },
+            { number: 6, title: "Structs & Pointers", topic: "Struct literals, value vs pointer receivers" },
+            { number: 7, title: "Implicit Interfaces", topic: "Duck-typed interfaces and small interface design" },
+            { number: 8, title: "Explicit Error Handling", topic: "if err != nil patterns, errors.New, and fmt.Errorf" },
+            { number: 9, title: "Defer, Panic & Recover", topic: "Clean resource release with defer statements" },
+            { number: 10, title: "Goroutines", topic: "Launching lightweight concurrent tasks with go" },
+            { number: 11, title: "Channels", topic: "Unbuffered and buffered channels (ch <- v, <-ch)" },
+            { number: 12, title: "Select & Timeouts", topic: "Multiplexing channels with select statements" },
+            { number: 13, title: "Sync & WaitGroups", topic: "sync.WaitGroup and sync.Mutex coordination" },
+            { number: 14, title: "JSON & HTTP", topic: "Struct tags, json.Marshal, and net/http handlers" },
+            { number: 15, title: "Context & Cancellation", topic: "context.Context timeouts in cloud services" }
+          ]
+        },
+        {
+          id: "bash",
+          order: 9,
+          name: "Bash",
+          icon: "fa-solid fa-terminal",
+          accent: "emerald",
+          playableByDefault: false,
+          executionMode: "ai",
+          aiEraWhy: "Glue code for Linux servers, Docker containers, CI/CD pipelines, and CLI AI workflows.",
+          promptTemplate: `You are designing POSIX/Bash shell scripting challenges for CodeQuest.
+Emphasize quoting variables, pipes, exit codes, conditionals [[ ]], loops, and text processing.`,
+          levels: [
+            { number: 1, title: "Echo, Variables & Quoting", topic: "Variable assignment (no spaces!) and \"$VAR\" quoting" },
+            { number: 2, title: "Pipes & Redirection", topic: "|, >, >>, 2>&1, and stdin/stdout streams" },
+            { number: 3, title: "Exit Codes & Chaining", topic: "$?, &&, ||, and set -euo pipefail" },
+            { number: 4, title: "Conditionals [[ ]]", topic: "if [[ ... ]]; then, string (-z, -n) and file (-f, -d) tests" },
+            { number: 5, title: "Command Substitution", topic: "Capturing command output with $(...) and arithmetic $(( ))" },
+            { number: 6, title: "For & While Loops", topic: "Looping over globs, arrays, and reading lines with while read" },
+            { number: 7, title: "Functions & Arguments", topic: "Positional parameters ($1, $@, $#) and local variables" },
+            { number: 8, title: "Flags & Options", topic: "Positional parameters ($1, $@, $#) and getopts flags" },
+            { number: 9, title: "Grep & Regular Expressions", topic: "Searching logs with grep -E, -i, -v, and -r" },
+            { number: 10, title: "Sed Stream Editing", topic: "In-place substitutions with sed 's/old/new/g'" },
+            { number: 11, title: "Awk Column Processing", topic: "Extracting fields and totals with awk '{print $1}'" },
+            { number: 12, title: "Find & Xargs", topic: "Locating files with find and batch execution" },
+            { number: 13, title: "Processes & Signals", topic: "Background jobs (&), ps, kill, and trap cleanup" },
+            { number: 14, title: "Curl & jq for APIs", topic: "Querying JSON APIs from the command line" },
+            { number: 15, title: "Production Automation", topic: "Writing idempotent deployment and backup scripts" }
+          ]
+        }
+      ],
+
+      badges: [
+        { id: "first_step", name: "First Commit", desc: "Complete your first level", icon: "fa-solid fa-seedling", color: "emerald" },
+        { id: "bug_slayer", name: "Bug Slayer", desc: "Solve 5 Bug Hunt challenges", icon: "fa-solid fa-bug-slash", color: "rose" },
+        { id: "daily_hero", name: "Daily Discipline", desc: "Complete your 15-min Daily Goal", icon: "fa-solid fa-calendar-check", color: "amber" },
+        { id: "py_runner", name: "Pythonista", desc: "Pass 5 Write-It code tests in Python", icon: "fa-brands fa-python", color: "indigo" },
+        { id: "sharp_eye", name: "Oracle", desc: "Pass a level with 100% accuracy", icon: "fa-solid fa-eye", color: "cyan" },
+        { id: "placement_pro", name: "Fast Track", desc: "Take a language Placement Test", icon: "fa-solid fa-rocket", color: "violet" },
+        { id: "world_conqueror", name: "World Conqueror", desc: "Pass a Language Final Exam (80%+)", icon: "fa-solid fa-crown", color: "amber" }
+      ]
+    };
+
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx && (window.AudioContext || window.webkitAudioContext)) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      play(type) {
+        if (!this.enabled) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          if (this.ctx.state === "suspended") this.ctx.resume();
+
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          if (type === "correct") {
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(523.25, now); // C5
+            osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+            osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+            gain.gain.setValueAtTime(0.12, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            osc.start(now);
+            osc.stop(now + 0.35);
+          } else if (type === "wrong") {
+            osc.type = "sawtooth";
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.linearRampToValueAtTime(150, now + 0.25);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+            osc.start(now);
+            osc.stop(now + 0.28);
+          } else if (type === "levelup") {
+            const notes = [523.25, 659.25, 783.99, 1046.5];
+            notes.forEach((freq, i) => {
+              const o = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              o.type = "triangle";
+              o.connect(g);
+              g.connect(this.ctx.destination);
+              o.frequency.setValueAtTime(freq, now + i * 0.09);
+              g.gain.setValueAtTime(0.12, now + i * 0.09);
+              g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.3);
+              o.start(now + i * 0.09);
+              o.stop(now + i * 0.09 + 0.3);
+            });
+          }
+        } catch (e) {
+          // Ignore audio context restrictions
+        }
+      }
+    }
+
+    function fireConfetti() {
+      const canvas = document.getElementById("confetti-canvas");
+      if (!canvas) return;
+      canvas.classList.remove("hidden");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const ctx = canvas.getContext("2d");
+      const colors = ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#38bdf8", "#a855f7"];
+      const particles = Array.from({ length: 75 }, () => ({
+        x: canvas.width / 2 + (Math.random() - 0.5) * 180,
+        y: canvas.height * 0.45,
+        vx: (Math.random() - 0.5) * 14,
+        vy: -Math.random() * 14 - 4,
+        size: Math.random() * 7 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI,
+        vRot: (Math.random() - 0.5) * 0.2
+      }));
+
+      let frame = 0;
+      function render() {
+        frame++;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.42; // gravity
+          p.rot += p.vRot;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        });
+        if (frame < 75) {
+          requestAnimationFrame(render);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.classList.add("hidden");
+        }
+      }
+      requestAnimationFrame(render);
+    }
+
+    function getEffectiveApiKey() {
+      try {
+        const customKey = localStorage.getItem("codequest_custom_api_key");
+        if (customKey && customKey.trim()) return customKey.trim();
+      } catch (e) {}
+      return apiKey;
+    }
+
+    async function callGeminiJSON(systemInstruction, userPrompt, responseSchema) {
+      const activeKey = getEffectiveApiKey();
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.model}:generateContent?key=${activeKey}`;
+      const payload = {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: responseSchema,
+          temperature: 0.55
+        }
+      };
+
+      const delays = [1000, 2000, 4000];
+      let lastError = null;
+
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`Gemini API HTTP ${res.status}: ${errText}`);
+          }
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) throw new Error("Empty response from Gemini model");
+          return JSON.parse(text);
+        } catch (err) {
+          lastError = err;
+          if (attempt < delays.length) {
+            await new Promise(r => setTimeout(r, delays[attempt]));
+          }
+        }
+      }
+      throw lastError;
+    }
+
+    class PythonRunner {
+      constructor() {
+        this.pyodide = null;
+        this.loadingPromise = null;
+      }
+
+      async ensureLoaded() {
+        if (this.pyodide) return this.pyodide;
+        if (this.loadingPromise) return this.loadingPromise;
+
+        this.loadingPromise = (async () => {
+          let waitCount = 0;
+          while (typeof window.loadPyodide === "undefined" && waitCount < 50) {
+            await new Promise(r => setTimeout(r, 150));
+            waitCount++;
+          }
+          if (typeof window.loadPyodide === "undefined") {
+            throw new Error("Pyodide script failed to load. Check your internet connection.");
+          }
+          this.pyodide = await window.loadPyodide({
+            indexURL: new URL("pyodide/", document.baseURI).href
+          });
+          return this.pyodide;
+        })();
+
+        try {
+          return await this.loadingPromise;
+        } catch (err) {
+          this.loadingPromise = null;
+          throw err;
+        }
+      }
+
+      /**
+       * Executes a Predict-the-Output code snippet in Pyodide and returns the actual
+       * stdout, final variable values, or raised exception so answer keys are 100% accurate.
+       */
+      async evaluateSnippetGroundTruth(codeSnippet, promptText = "") {
+        if (!codeSnippet) return null;
+        let py;
+        try {
+          py = await this.ensureLoaded();
+        } catch (e) {
+          return null;
+        }
+        if (!py) return null;
+
+        const wrapped = `
+import sys, io
+_stdout_buf = io.StringIO()
+sys.stdout = _stdout_buf
+_ns = {}
+_err = ""
+try:
+    exec(${JSON.stringify(codeSnippet)}, _ns)
+except Exception as ex:
+    _err = f"{type(ex).__name__}: {str(ex)}"
+finally:
+    sys.stdout = sys.__stdout__
+
+_user_vars = {k: repr(v) for k, v in _ns.items() if not k.startswith("_") and k not in ("sys", "io")}
+_user_strs = {k: str(v) for k, v in _ns.items() if not k.startswith("_") and k not in ("sys", "io")}
+(_stdout_buf.getvalue().strip(), _err, _user_vars, _user_strs)
+`;
+        try {
+          const res = await py.runPythonAsync(wrapped);
+          const [stdout, err, userVarsMap, userStrsMap] = res.toJs();
+          res.destroy();
+          const varsObj = userVarsMap instanceof Map ? Object.fromEntries(userVarsMap) : (userVarsMap || {});
+          const strsObj = userStrsMap instanceof Map ? Object.fromEntries(userStrsMap) : (userStrsMap || {});
+          return { stdout, err, varsObj, strsObj };
+        } catch (e) {
+          return null;
+        }
+      }
+
+      /**
+       * Runs user Python code against an array of Python assertion test expressions.
+       */
+      async runCodeWithTests(userCode, testCases) {
+        const py = await this.ensureLoaded();
+        const results = [];
+        let capturedStdout = "";
+
+        const setupScript = `
+import sys, io
+_cq_stdout = io.StringIO()
+sys.stdout = _cq_stdout
+_cq_ns = {}
+`;
+        await py.runPythonAsync(setupScript);
+
+        let syntaxOrRuntimeError = null;
+        try {
+          const execUser = `
+try:
+    exec(${JSON.stringify(userCode)}, _cq_ns)
+    _cq_user_err = None
+except Exception as e:
+    _cq_user_err = f"{type(e).__name__}: {str(e)}"
+_cq_user_err
+`;
+          syntaxOrRuntimeError = await py.runPythonAsync(execUser);
+        } catch (err) {
+          syntaxOrRuntimeError = err.message;
+        }
+
+        capturedStdout = await py.runPythonAsync("_cq_stdout.getvalue()");
+        await py.runPythonAsync("sys.stdout = sys.__stdout__");
+
+        if (syntaxOrRuntimeError) {
+          return {
+            allPassed: false,
+            stdout: capturedStdout,
+            runtimeError: syntaxOrRuntimeError,
+            results: testCases.map(tc => ({
+              description: tc.description,
+              assertion: tc.assertion,
+              passed: false,
+              error: syntaxOrRuntimeError
+            }))
+          };
+        }
+
+        for (const tc of testCases) {
+          const rawAssertion = (tc.assertion || "True").trim();
+          const checkScript = `
+_cq_ns["_stdout"] = _cq_stdout.getvalue().strip()
+_cq_test_err = None
+try:
+    exec(${JSON.stringify(rawAssertion)}, _cq_ns)
+    _cq_passed = True
+except AssertionError as ae:
+    _cq_passed = False
+    _cq_test_err = "Assertion did not match expected output"
+except Exception as ex:
+    _cq_passed = False
+    _cq_test_err = f"{type(ex).__name__}: {str(ex)}"
+
+# Fallback: if assertion expected a printed literal value, check if stdout matches
+if not _cq_passed and "==" in ${JSON.stringify(rawAssertion)} and "_stdout" not in ${JSON.stringify(rawAssertion)}:
+    try:
+        _rhs_expr = ${JSON.stringify(rawAssertion)}.split("==", 1)[1].strip()
+        _expected_val = eval(_rhs_expr, _cq_ns)
+        if _cq_ns["_stdout"] == str(_expected_val).strip():
+            _cq_passed = True
+            _cq_test_err = None
+    except Exception:
+        pass
+
+(_cq_passed, _cq_test_err)
+`;
+          try {
+            const pyRes = await py.runPythonAsync(checkScript);
+            const [passed, errStr] = pyRes.toJs();
+            pyRes.destroy();
+            results.push({
+              description: tc.description,
+              assertion: tc.assertion,
+              passed: Boolean(passed),
+              error: errStr || null
+            });
+          } catch (err) {
+            results.push({
+              description: tc.description,
+              assertion: tc.assertion,
+              passed: false,
+              error: err.message
+            });
+          }
+        }
+
+        const allPassed = results.length > 0 && results.every(r => r.passed);
+        return {
+          allPassed,
+          stdout: capturedStdout,
+          runtimeError: null,
+          results
+        };
+      }
+    }
+
+    class CodeQuestApp {
+      constructor() {
+        this.storageKey = "codequest_state_v1";
+        this.cacheKey = "codequest_content_cache_v3";
+        this.sfx = new SoundFX();
+        this.pyRunner = new PythonRunner();
+
+        this.state = this.loadState();
+        this.cache = this.loadCache();
+
+        this.currentView = "home"; // 'home' | 'levels' | 'session' | 'quiz' | 'review' | 'badges'
+        this.session = null;
+        this.heartInterval = null;
+      }
+
+      getDefaultState() {
+        const today = new Date().toISOString().slice(0, 10);
+        const languagesState = {};
+        CONFIG.languages.forEach(lang => {
+          languagesState[lang.id] = {
+            unlocked: Boolean(lang.playableByDefault),
+            earlyUnlocked: false,
+            placementTaken: false,
+            currentLevel: 1,
+            unlockedUpTo: 1,
+            completedLevels: {}, // { [levelNum]: { bestScore: 100, stars: 3 } }
+            finalExamPassed: false,
+            finalExamBestScore: 0
+          };
+        });
+
+        return {
+          activeLangId: "python",
+          xp: 0,
+          streak: 1,
+          lastActiveDate: today,
+          hearts: CONFIG.maxHearts,
+          lastHeartLostAt: null,
+          adaptiveDifficulty: 50, // 0 (easier) to 100 (harder)
+          stats: {
+            bugHuntsSolved: 0,
+            writeItSolved: 0,
+            totalChallengesSolved: 0
+          },
+          daily: {
+            date: today,
+            challengesDone: 0,
+            reviewSetsDone: 0,
+            completedBannerShown: false
+          },
+          badges: [],
+          reviewDeck: [
+            {
+              id: "seed_py_1",
+              langId: "python",
+              topic: "Variables & f-strings",
+              box: 1,
+              nextDue: Date.now()
+            },
+            {
+              id: "seed_py_2",
+              langId: "python",
+              topic: "Lists, loops, and conditionals",
+              box: 1,
+              nextDue: Date.now()
+            }
+          ],
+          languages: languagesState
+        };
+      }
+
+      loadState() {
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (!raw) return this.getDefaultState();
+          const parsed = JSON.parse(raw);
+          const def = this.getDefaultState();
+          const merged = { ...def, ...parsed, languages: { ...def.languages, ...(parsed.languages || {}) } };
+          CONFIG.languages.forEach(l => {
+            if (!merged.languages[l.id]) {
+              merged.languages[l.id] = def.languages[l.id];
+            }
+          });
+          this.reconcileDailyAndStreak(merged);
+          return merged;
+        } catch (e) {
+          return this.getDefaultState();
+        }
+      }
+
+      saveState() {
+        try {
+          localStorage.setItem(this.storageKey, JSON.stringify(this.state));
+        } catch (e) {}
+      }
+
+      loadCache() {
+        try {
+          const raw = localStorage.getItem(this.cacheKey);
+          return raw ? JSON.parse(raw) : {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      saveCache() {
+        try {
+          localStorage.setItem(this.cacheKey, JSON.stringify(this.cache));
+        } catch (e) {}
+      }
+
+      reconcileDailyAndStreak(stateObj) {
+        const today = new Date().toISOString().slice(0, 10);
+        if (stateObj.daily?.date !== today) {
+          const prevDate = new Date(stateObj.lastActiveDate || today);
+          const currDate = new Date(today);
+          const diffDays = Math.round((currDate - prevDate) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            stateObj.streak = (stateObj.streak || 1) + 1;
+          } else if (diffDays > 1) {
+            stateObj.streak = 1;
+          }
+          stateObj.lastActiveDate = today;
+          stateObj.daily = {
+            date: today,
+            challengesDone: 0,
+            reviewSetsDone: 0,
+            completedBannerShown: false
+          };
+        }
+      }
+
+      init() {
+        this.setupPWA();
+        this.tickHearts();
+        this.heartInterval = setInterval(() => this.tickHearts(), 1000);
+        this.renderAll();
+
+        if (this.getActiveLanguage().executionMode === "pyodide") {
+          setTimeout(() => {
+            this.pyRunner.ensureLoaded().catch(() => {});
+          }, 1200);
+        }
+      }
+
+      setupPWA() {
+        this.deferredInstallPrompt = null;
+
+        // 1. Generate a crisp 512x512 native app icon on the fly
+        let iconDataUrl = "";
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = 512;
+          canvas.height = 512;
+          const ctx = canvas.getContext("2d");
+
+          // Rounded dark-indigo gradient background
+          const grad = ctx.createLinearGradient(0, 0, 512, 512);
+          grad.addColorStop(0, "#6366f1");
+          grad.addColorStop(1, "#7c3aed");
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(0, 0, 512, 512, 112);
+          ctx.fill();
+
+          // Terminal prompt symbol ">_"
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "900 220px 'JetBrains Mono', monospace";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(">_", 256, 265);
+
+          iconDataUrl = canvas.toDataURL("image/png");
+
+          // Attach Apple Touch Icon & Favicon for iOS/Android Home Screen
+          const appleIcon = document.createElement("link");
+          appleIcon.rel = "apple-touch-icon";
+          appleIcon.href = iconDataUrl;
+          document.head.appendChild(appleIcon);
+
+          const favIcon = document.createElement("link");
+          favIcon.rel = "icon";
+          favIcon.type = "image/png";
+          favIcon.href = iconDataUrl;
+          document.head.appendChild(favIcon);
+        } catch (e) {}
+
+        // 2. Inject Web App Manifest so browsers treat CodeQuest as a standalone app
+        try {
+          const manifest = {
+            name: "CodeQuest — Learn Programming",
+            short_name: "CodeQuest",
+            description: "Learn programming one language at a time with interactive AI challenges.",
+            start_url: window.location.href,
+            display: "standalone",
+            orientation: "portrait",
+            background_color: "#060a13",
+            theme_color: "#060a13",
+            icons: iconDataUrl
+              ? [
+                  { src: iconDataUrl, sizes: "192x192", type: "image/png", purpose: "any maskable" },
+                  { src: iconDataUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+                ]
+              : []
+          };
+          const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+          const manifestURL = URL.createObjectURL(blob);
+          const link = document.createElement("link");
+          link.rel = "manifest";
+          link.href = manifestURL;
+          document.head.appendChild(link);
+        } catch (e) {}
+
+        // 3. Listen for native browser install prompt (Desktop Chrome/Edge & Android)
+        window.addEventListener("beforeinstallprompt", (e) => {
+          e.preventDefault();
+          this.deferredInstallPrompt = e;
+          const btn = document.getElementById("install-app-btn");
+          if (btn) {
+            btn.classList.add("pulse-ring");
+          }
+        });
+      }
+
+      async triggerNativeInstall() {
+        if (this.deferredInstallPrompt) {
+          this.deferredInstallPrompt.prompt();
+          const { outcome } = await this.deferredInstallPrompt.userChoice;
+          if (outcome === "accepted") {
+            this.deferredInstallPrompt = null;
+            this.closeModal();
+            this.showToast("CodeQuest installed as an app!", "emerald", "fa-solid fa-check");
+          }
+        } else {
+          this.showToast("Follow the quick step below for your device!", "indigo");
+        }
+      }
+
+      openInstallModal() {
+        const hasDirectPrompt = Boolean(this.deferredInstallPrompt);
+        this.showModal(`
+          <div class="space-y-4 max-h-[82vh] overflow-y-auto pr-1">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xl shadow-lg">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-extrabold text-white">Get the CodeQuest App</h3>
+                <p class="text-xs text-slate-400">Run full-screen with its own icon—just like YouTube</p>
+              </div>
+            </div>
+
+            ${hasDirectPrompt ? `
+              <button onclick="app.triggerNativeInstall()" class="btn-game w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-extrabold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-download"></i>
+                <span>Install CodeQuest App Now (1-Click)</span>
+              </button>
+            ` : ""}
+
+            <div class="space-y-3 text-xs text-slate-300">
+              <!-- Step 1: PWA Install -->
+              <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3.5 space-y-1.5">
+                <div class="font-bold text-indigo-300 flex items-center gap-1.5">
+                  <i class="fa-solid fa-bolt"></i>
+                  <span>Method 1: Instant Web App (PC, Android &amp; iPhone)</span>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  1. Host your exported <code class="text-slate-200">index.html</code> for free by dragging it onto <strong>app.netlify.com/drop</strong> (takes 10 seconds).<br/>
+                  2. Open that link on your phone or PC:<br/>
+                  • <strong>Android / PC (Chrome &amp; Edge):</strong> Tap the <strong>Install App</strong> icon in the address bar or menu.<br/>
+                  • <strong>iPhone / iPad (Safari):</strong> Tap <strong>Share</strong> <i class="fa-solid fa-arrow-up-from-bracket"></i> &rarr; <strong>Add to Home Screen</strong>.
+                </p>
+              </div>
+
+              <!-- Step 2: Real Android .APK -->
+              <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3.5 space-y-1.5">
+                <div class="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <i class="fa-brands fa-android"></i>
+                  <span>Method 2: Convert to a Native Android .APK File</span>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                  Want a real downloadable <code class="text-slate-200">.apk</code> file? Go to <strong>webintoapp.com</strong> or Microsoft's <strong>pwabuilder.com</strong>, upload this <code class="text-slate-200">index.html</code> file (or paste your Netlify link), and click <strong>Build Android APK</strong>.
+                </p>
+              </div>
+            </div>
+
+            <button onclick="app.closeModal()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+              Got It
+            </button>
+          </div>
+        `);
+      }
+
+      tickHearts() {
+        if (this.state.hearts >= CONFIG.maxHearts) {
+          this.state.lastHeartLostAt = null;
+          const timerEl = document.getElementById("stat-heart-timer");
+          if (timerEl) timerEl.textContent = "";
+          return;
+        }
+        const now = Date.now();
+        if (!this.state.lastHeartLostAt) {
+          this.state.lastHeartLostAt = now;
+        }
+        const elapsed = now - this.state.lastHeartLostAt;
+        if (elapsed >= CONFIG.heartRefillMs) {
+          const gained = Math.floor(elapsed / CONFIG.heartRefillMs);
+          this.state.hearts = Math.min(CONFIG.maxHearts, this.state.hearts + gained);
+          this.state.lastHeartLostAt = this.state.hearts >= CONFIG.maxHearts
+            ? null
+            : now - (elapsed % CONFIG.heartRefillMs);
+          this.saveState();
+          this.updateHeaderStats();
+        } else {
+          const remainSec = Math.ceil((CONFIG.heartRefillMs - elapsed) / 1000);
+          const m = Math.floor(remainSec / 60);
+          const s = String(remainSec % 60).padStart(2, "0");
+          const timerEl = document.getElementById("stat-heart-timer");
+          if (timerEl) timerEl.textContent = `(${m}:${s})`;
+        }
+      }
+
+      getActiveLanguage() {
+        return CONFIG.languages.find(l => l.id === this.state.activeLangId) || CONFIG.languages[0];
+      }
+
+      getActiveLangState() {
+        return this.state.languages[this.state.activeLangId];
+      }
+
+      getPlayerLevel() {
+        return Math.floor(this.state.xp / 150) + 1;
+      }
+
+      isDailyGoalComplete() {
+        const d = this.state.daily;
+        return d.challengesDone >= CONFIG.dailyGoal.targetChallenges &&
+               d.reviewSetsDone >= CONFIG.dailyGoal.targetReviewSets;
+      }
+
+      unlockBadge(badgeId) {
+        if (!this.state.badges.includes(badgeId)) {
+          this.state.badges.push(badgeId);
+          const badge = CONFIG.badges.find(b => b.id === badgeId);
+          if (badge) {
+            this.showToast(`Badge Unlocked: ${badge.name}!`, "emerald", badge.icon);
+          }
+          this.saveState();
+        }
+      }
+
+      showToast(message, color = "indigo", icon = "fa-solid fa-sparkles") {
+        const container = document.getElementById("toast-container");
+        if (!container) return;
+        const el = document.createElement("div");
+        const colorClasses = {
+          indigo: "bg-indigo-950/95 border-indigo-500/50 text-indigo-200",
+          emerald: "bg-emerald-950/95 border-emerald-500/50 text-emerald-200",
+          amber: "bg-amber-950/95 border-amber-500/50 text-amber-200",
+          rose: "bg-rose-950/95 border-rose-500/50 text-rose-200"
+        }[color] || "bg-slate-900/95 border-slate-700 text-slate-200";
+
+        el.className = `px-4 py-3 rounded-xl border shadow-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold animate-pop ${colorClasses}`;
+        el.innerHTML = `<i class="${icon}"></i><span>${this.escapeHTML(message)}</span>`;
+        container.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = "0";
+          el.style.transition = "opacity 0.25s ease";
+          setTimeout(() => el.remove(), 260);
+        }, 3200);
+      }
+
+      escapeHTML(str) {
+        return String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      /**
+       * Sanitizes and reconciles AI-generated challenges so 1-based vs 0-based indices,
+       * single vs double quotes, or mismatched option indices never mark a right answer wrong.
+       */
+      stripSurroundingQuotes(str) {
+        return String(str ?? "")
+          .trim()
+          .replace(/^['"`]+|['"`]+$/g, "")
+          .trim();
+      }
+
+      canonicalizeOutput(str) {
+        return this.stripSurroundingQuotes(str)
+          .replace(/\\n/g, " ")
+          .replace(/\r?\n/g, " ")
+          .replace(/'/g, '"')
+          .replace(/\s*([,\]:\}\(\[\{])\s*/g, "$1")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+      }
+
+      findMatchingOptionIndex(options, targetText) {
+        if (!Array.isArray(options) || targetText === undefined || targetText === null) return -1;
+        const rawTarget = String(targetText).trim().toLowerCase();
+        const strippedTarget = this.stripSurroundingQuotes(targetText).toLowerCase();
+        const canonTarget = this.canonicalizeOutput(targetText);
+        if (!rawTarget && !strippedTarget) return -1;
+
+        // 1. Exact case-insensitive match
+        let idx = options.findIndex(o => String(o).trim().toLowerCase() === rawTarget);
+        if (idx >= 0) return idx;
+
+        // 2. Quote-insensitive match (e.g. '"Final: 15"' === 'Final: 15')
+        idx = options.findIndex(
+          o => this.stripSurroundingQuotes(o).toLowerCase() === strippedTarget
+        );
+        if (idx >= 0) return idx;
+
+        // 3. Canonical match (handles ['a', 'b'] vs ["a", "b"], multiline \n vs space, etc.)
+        if (canonTarget) {
+          idx = options.findIndex(o => this.canonicalizeOutput(o) === canonTarget);
+          if (idx >= 0) return idx;
+        }
+        return -1;
+      }
+
+      normalizeLevelData(data) {
+        if (!data || !Array.isArray(data.challenges)) return data;
+        data.challenges.forEach(ch => {
+          // 1. Bug Hunt normalization
+          if (ch.type === "bug_hunt") {
+            if ((!Array.isArray(ch.codeLines) || ch.codeLines.length === 0) && ch.codeSnippet) {
+              ch.codeLines = ch.codeSnippet.split("\n");
+            }
+            if (!Array.isArray(ch.bugOptions) || ch.bugOptions.length === 0) {
+              ch.bugOptions = Array.isArray(ch.options) && ch.options.length > 0
+                ? ch.options
+                : ["Logic or syntax bug on this line", "Variable name typo", "Indentation error", "No bug on this line"];
+            }
+            if (typeof ch.correctBugOptionIndex !== "number" && typeof ch.correctOptionIndex === "number") {
+              ch.correctBugOptionIndex = ch.correctOptionIndex;
+            }
+            if (ch.correctBugOptionText) {
+              const matchedOptIdx = this.findMatchingOptionIndex(ch.bugOptions, ch.correctBugOptionText);
+              if (matchedOptIdx >= 0) ch.correctBugOptionIndex = matchedOptIdx;
+            }
+            if (typeof ch.correctBugOptionIndex !== "number" || ch.correctBugOptionIndex < 0 || ch.correctBugOptionIndex >= ch.bugOptions.length) {
+              ch.correctBugOptionIndex = 0;
+            }
+            // Reconcile buggyLineIndex using buggyLineText if available
+            if (ch.buggyLineText && Array.isArray(ch.codeLines)) {
+              const target = ch.buggyLineText.trim();
+              const normTarget = target.replace(/\s+/g, "");
+              let foundLineIdx = ch.codeLines.findIndex(l => l.trim() === target || l.includes(target));
+              if (foundLineIdx < 0 && normTarget.length > 2) {
+                foundLineIdx = ch.codeLines.findIndex(l => l.replace(/\s+/g, "").includes(normTarget));
+              }
+              if (foundLineIdx >= 0) {
+                ch.buggyLineIndex = foundLineIdx;
+              }
+            }
+            if (Array.isArray(ch.codeLines) && typeof ch.buggyLineIndex === "number") {
+              if (ch.buggyLineIndex >= ch.codeLines.length) {
+                ch.buggyLineIndex = Math.max(0, ch.codeLines.length - 1);
+              }
+            }
+          }
+
+          // 2. Predict Output normalization
+          if (ch.type === "predict_output") {
+            if (!Array.isArray(ch.options) || ch.options.length === 0) {
+              ch.options = ["True", "False", "None", "Error"];
+            }
+            if (ch.correctAnswerText) {
+              const matchedIdx = this.findMatchingOptionIndex(ch.options, ch.correctAnswerText);
+              if (matchedIdx >= 0) ch.correctOptionIndex = matchedIdx;
+            }
+            if (typeof ch.correctOptionIndex !== "number" || ch.correctOptionIndex < 0 || ch.correctOptionIndex >= ch.options.length) {
+              ch.correctOptionIndex = 0;
+            }
+          }
+
+          // 3. Fill the Gap normalization
+          if (ch.type === "fill_gap") {
+            if (!Array.isArray(ch.gapChoices)) ch.gapChoices = [];
+            if (!Array.isArray(ch.acceptedGapAnswers)) ch.acceptedGapAnswers = [];
+            if (ch.correctAnswerText && !ch.acceptedGapAnswers.includes(ch.correctAnswerText)) {
+              ch.acceptedGapAnswers.push(ch.correctAnswerText);
+            }
+            if (ch.acceptedGapAnswers.length === 0 && ch.gapChoices.length > 0) {
+              const idx = typeof ch.correctOptionIndex === "number" && ch.gapChoices[ch.correctOptionIndex] ? ch.correctOptionIndex : 0;
+              ch.acceptedGapAnswers.push(ch.gapChoices[idx]);
+            }
+            ch.acceptedGapAnswers.forEach(ans => {
+              if (ans && ch.gapChoices.length > 0 && !ch.gapChoices.some(c => this.stripSurroundingQuotes(c) === this.stripSurroundingQuotes(ans))) {
+                ch.gapChoices[0] = ans;
+              }
+            });
+          }
+        });
+        return data;
+      }
+
+      /**
+       * Runs a Python Predict-the-Output snippet in Pyodide and snaps `correctOptionIndex`
+       * to whichever option matches the true runtime stdout, target variable value, or error.
+       */
+      async reconcileQuestionWithPyodide(q) {
+        if (!q || !q.codeSnippet || !Array.isArray(q.options)) return;
+        const lang = this.getActiveLanguage();
+        if (lang.executionMode !== "pyodide") return;
+
+        const truth = await this.pyRunner.evaluateSnippetGroundTruth(q.codeSnippet, q.prompt);
+        if (!truth) return;
+
+        // 1. If the snippet raised a runtime exception, check if an option represents an Error
+        if (truth.err) {
+          const errType = truth.err.split(":")[0].trim().toLowerCase();
+          const errIdx = q.options.findIndex(o => {
+            const low = String(o).toLowerCase();
+            return low.includes("error") || low.includes("exception") || (errType && low.includes(errType));
+          });
+          if (errIdx >= 0) {
+            q.correctOptionIndex = errIdx;
+            q.correctAnswerText = q.options[errIdx];
+            return;
+          }
+        }
+
+        // 2. If stdout was printed, match against options
+        if (truth.stdout) {
+          const idx = this.findMatchingOptionIndex(q.options, truth.stdout);
+          if (idx >= 0) {
+            q.correctOptionIndex = idx;
+            q.correctAnswerText = q.options[idx];
+            return;
+          }
+        }
+
+        // 3. If no stdout (e.g. "What is the final value of 'result'?"), check variables in namespace
+        const varNames = Object.keys(truth.strsObj || {});
+        if (varNames.length > 0) {
+          const mentionedVars = varNames.filter(v => (q.prompt || "").includes(v));
+          const candidates = mentionedVars.length > 0 ? mentionedVars : [varNames[varNames.length - 1], ...varNames.reverse()];
+
+          for (const vName of candidates) {
+            const strVal = truth.strsObj[vName];
+            const reprVal = truth.varsObj[vName];
+            let idx = this.findMatchingOptionIndex(q.options, reprVal);
+            if (idx < 0) idx = this.findMatchingOptionIndex(q.options, strVal);
+            if (idx >= 0) {
+              q.correctOptionIndex = idx;
+              q.correctAnswerText = q.options[idx];
+              return;
+            }
+          }
+        }
+      }
+
+      normalizeQuizQuestions(questions) {
+        if (!Array.isArray(questions)) return [];
+        questions.forEach(q => {
+          if (q.correctAnswerText && Array.isArray(q.options)) {
+            const idx = this.findMatchingOptionIndex(q.options, q.correctAnswerText);
+            if (idx >= 0) q.correctOptionIndex = idx;
+          }
+          if (typeof q.correctOptionIndex !== "number" || q.correctOptionIndex < 0 || (q.options && q.correctOptionIndex >= q.options.length)) {
+            q.correctOptionIndex = 0;
+          }
+        });
+        return questions;
+      }
+
+      async fetchOrGenerateLevelContent(langId, levelNum, forceRegenerate = false) {
+        const cacheId = `${langId}_lvl_${levelNum}`;
+        if (!forceRegenerate && this.cache[cacheId]) {
+          return this.normalizeLevelData(this.cache[cacheId]);
+        }
+
+        const lang = CONFIG.languages.find(l => l.id === langId);
+        const lvlMeta = lang.levels.find(lv => lv.number === levelNum) || lang.levels[0];
+        const diffLabel = this.state.adaptiveDifficulty > 70
+          ? "slightly brisk/challenging"
+          : this.state.adaptiveDifficulty < 35
+            ? "gentle and supportive"
+            : "balanced";
+
+        const systemInstruction = `${lang.promptTemplate}
+PEDAGOGICAL & ACCURACY RULES:
+1. Keep the lesson readable in 30 seconds (max 3 short paragraphs) with ONE concrete ${lang.name} code example.
+2. Generate exactly 5 challenges in this order:
+   - Challenge 1: type "predict_output" (Predict the Output)
+   - Challenge 2: type "bug_hunt" (Bug Hunt: tap the buggy line and choose why it's buggy)
+   - Challenge 3: type "fill_gap" (Fill the Gap: complete the missing '___' token in gapCodeTemplate)
+   - Challenge 4: type "predict_output" or "fill_gap"
+   - Challenge 5: type "write_it" (Boss Challenge: write ${lang.name} code in the editor that passes testCases)
+3. CRITICAL INDEXING & ANSWER RULES:
+   - All code snippets, starterCode, and gapCodeTemplate MUST be written in idiomatic ${lang.name}.
+   - For "bug_hunt": codeLines is a 0-indexed array of ${lang.name} lines. Set buggyLineText to the EXACT string of the buggy line from codeLines, and set correctBugOptionText to the exact text of the winning option from bugOptions.
+   - For "predict_output": Mentally execute the ${lang.name} codeSnippet line by line! Set correctAnswerText to the EXACT string from options that equals the true output, and set correctOptionIndex to its 0-based index (0, 1, 2, or 3).
+   - For "fill_gap": gapCodeTemplate must contain '___'. Include all valid variations in acceptedGapAnswers, and set correctAnswerText to the exact right choice from gapChoices.
+   - For "write_it": Keep testCases assertions clear single-line ${lang.name} check expressions (for Python, valid Python assert expressions like "add(2, 3) == 5"; for other languages, clear expected behavior checks for the AI judge).
+4. Difficulty tone: ${diffLabel}. Keep explanations short (1-2 sentences).`;
+
+        const userPrompt = `Generate Level ${levelNum} for ${lang.name}: "${lvlMeta.title}" covering topic: ${lvlMeta.topic}.`;
+
+        const schema = {
+          type: "OBJECT",
+          properties: {
+            levelTitle: { type: "STRING" },
+            lesson: {
+              type: "OBJECT",
+              properties: {
+                summary: { type: "STRING" },
+                keyPoints: { type: "ARRAY", items: { type: "STRING" } },
+                exampleCode: { type: "STRING" },
+                exampleOutput: { type: "STRING" },
+                exampleTakeaway: { type: "STRING" }
+              },
+              required: ["summary", "keyPoints", "exampleCode", "exampleOutput", "exampleTakeaway"]
+            },
+            challenges: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  type: { type: "STRING", enum: ["bug_hunt", "predict_output", "fill_gap", "write_it"] },
+                  isBoss: { type: "BOOLEAN" },
+                  title: { type: "STRING" },
+                  prompt: { type: "STRING" },
+                  codeSnippet: { type: "STRING" },
+                  codeLines: { type: "ARRAY", items: { type: "STRING" } },
+                  buggyLineIndex: { type: "INTEGER" },
+                  buggyLineText: { type: "STRING" },
+                  bugOptions: { type: "ARRAY", items: { type: "STRING" } },
+                  correctBugOptionIndex: { type: "INTEGER" },
+                  correctBugOptionText: { type: "STRING" },
+                  options: { type: "ARRAY", items: { type: "STRING" } },
+                  correctOptionIndex: { type: "INTEGER" },
+                  correctAnswerText: { type: "STRING" },
+                  gapCodeTemplate: { type: "STRING" },
+                  gapChoices: { type: "ARRAY", items: { type: "STRING" } },
+                  acceptedGapAnswers: { type: "ARRAY", items: { type: "STRING" } },
+                  starterCode: { type: "STRING" },
+                  testCases: {
+                    type: "ARRAY",
+                    items: {
+                      type: "OBJECT",
+                      properties: {
+                        description: { type: "STRING" },
+                        assertion: { type: "STRING" }
+                      },
+                      required: ["description", "assertion"]
+                    }
+                  },
+                  hint: { type: "STRING" },
+                  explanationAfterAttempt: { type: "STRING" }
+                },
+                required: ["type", "isBoss", "title", "prompt", "hint", "explanationAfterAttempt"]
+              }
+            }
+          },
+          required: ["levelTitle", "lesson", "challenges"]
+        };
+
+        try {
+          const rawGenerated = await callGeminiJSON(systemInstruction, userPrompt, schema);
+          const generated = this.normalizeLevelData(rawGenerated);
+          this.cache[cacheId] = generated;
+          this.saveCache();
+          return generated;
+        } catch (err) {
+          console.warn("Gemini API fallback triggered:", err);
+          return this.normalizeLevelData(this.getFallbackLevelData(lang, lvlMeta));
+        }
+      }
+
+      getFallbackLevelData(lang, lvlMeta) {
+        return {
+          levelTitle: `${lvlMeta.title}`,
+          lesson: {
+            summary: `In ${lang.name}, mastering ${lvlMeta.topic} lets you store, transform, and control data cleanly. Every line executes top-to-bottom with clear rules.`,
+            keyPoints: [
+              `Focus on clear variable names and readable expressions for ${lvlMeta.title}.`,
+              "Use print() or return values to verify each step of your logic.",
+              "Check edge cases like empty inputs or zero values."
+            ],
+            exampleCode: `score = 40\nbonus = 10\ntotal = score + bonus\nprint(f"Total: {total}")`,
+            exampleOutput: `Total: 50`,
+            exampleTakeaway: "Variables hold values in memory so you can combine and format them cleanly."
+          },
+          challenges: [
+            {
+              type: "predict_output",
+              isBoss: false,
+              title: "Trace the Value",
+              prompt: "What does this code print to the console?",
+              codeSnippet: "x = 7\nx = x + 5\nprint(x * 2)",
+              options: ["14", "19", "24", "12"],
+              correctOptionIndex: 2,
+              correctAnswerText: "24",
+              hint: "Update x first (7 + 5), then multiply the result by 2.",
+              explanationAfterAttempt: "First x becomes 12, and then 12 * 2 evaluates to 24."
+            },
+            {
+              type: "bug_hunt",
+              isBoss: false,
+              title: "Spot the Bug",
+              prompt: "Tap the buggy line and explain why it causes an issue.",
+              codeLines: [
+                "name = \"Ada\"",
+                "level = 3",
+                "print(\"Player \" + name + \" is level \" + level)",
+                "print(\"Ready!\")"
+              ],
+              buggyLineIndex: 2,
+              buggyLineText: "print(\"Player \" + name + \" is level \" + level)",
+              bugOptions: [
+                "Cannot concatenate a str and an int directly without str(level) or an f-string",
+                "Variables cannot be named 'level'",
+                "Strings must use single quotes only",
+                "print() can only be called once"
+              ],
+              correctBugOptionIndex: 0,
+              correctBugOptionText: "Cannot concatenate a str and an int directly without str(level) or an f-string",
+              hint: "Look at the types being combined with '+' on line 3.",
+              explanationAfterAttempt: "In Python, '+' cannot join a string and an integer directly. Use f\"Player {name} is level {level}\" or str(level)."
+            },
+            {
+              type: "fill_gap",
+              isBoss: false,
+              title: "Complete the Expression",
+              prompt: "Fill in the missing keyword or function to print the length of the list.",
+              gapCodeTemplate: "items = [\"sword\", \"shield\", \"potion\"]\nprint(___(items))",
+              gapChoices: ["len", "size", "count", "length"],
+              acceptedGapAnswers: ["len"],
+              correctAnswerText: "len",
+              hint: "Python uses a 3-letter built-in function to get collection length.",
+              explanationAfterAttempt: "The built-in len() function returns the number of items in a list, string, or dictionary."
+            },
+            {
+              type: "predict_output",
+              isBoss: false,
+              title: "Loop Output",
+              prompt: "What is printed when this snippet runs?",
+              codeSnippet: "nums = [2, 4, 6]\ntotal = 0\nfor n in nums:\n    total += n\nprint(total)",
+              options: ["6", "10", "12", "24"],
+              correctOptionIndex: 2,
+              correctAnswerText: "12",
+              hint: "Add each item in nums (2 + 4 + 6) into total.",
+              explanationAfterAttempt: "The for loop adds 2, 4, and 6 to total, resulting in 12."
+            },
+            {
+              type: "write_it",
+              isBoss: true,
+              title: "Boss Challenge: Double & Add",
+              prompt: "Write a function named `compute_xp(tasks)` that returns `tasks * 25`.",
+              starterCode: "def compute_xp(tasks):\n    # Return tasks multiplied by 25\n    return ",
+              testCases: [
+                { description: "compute_xp(1) returns 25", assertion: "compute_xp(1) == 25" },
+                { description: "compute_xp(4) returns 100", assertion: "compute_xp(4) == 100" },
+                { description: "compute_xp(0) returns 0", assertion: "compute_xp(0) == 0" }
+              ],
+              hint: "Use the * operator to multiply tasks by 25 and return the result.",
+              explanationAfterAttempt: "Defining `def compute_xp(tasks): return tasks * 25` computes the XP for any task count."
+            }
+          ]
+        };
+      }
+
+      async generateQuizQuestions(langId, mode = "placement") {
+        const lang = CONFIG.languages.find(l => l.id === langId);
+        const count = mode === "placement" ? 10 : 15;
+        const cacheKey = `${langId}_${mode}_quiz`;
+
+        const systemInstruction = `${lang.promptTemplate}
+Generate a ${count}-question multiple-choice ${mode === "placement" ? "Placement Test" : "Final Exam"} for ${lang.name}.
+Cover topics across Levels 1 to 15 progressively.
+Each question must have 4 options, an accurate correctOptionIndex (0-3), the exact matching correctAnswerText from options, a levelNumber (1-15), a topicTag, and a short 1-sentence explanation.`;
+
+        const userPrompt = `Create ${count} multiple-choice questions for ${lang.name} (${mode}).`;
+
+        const schema = {
+          type: "OBJECT",
+          properties: {
+            questions: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  prompt: { type: "STRING" },
+                  codeSnippet: { type: "STRING" },
+                  options: { type: "ARRAY", items: { type: "STRING" } },
+                  correctOptionIndex: { type: "INTEGER" },
+                  correctAnswerText: { type: "STRING" },
+                  levelNumber: { type: "INTEGER" },
+                  topicTag: { type: "STRING" },
+                  explanation: { type: "STRING" }
+                },
+                required: ["prompt", "codeSnippet", "options", "correctOptionIndex", "correctAnswerText", "levelNumber", "topicTag", "explanation"]
+              }
+            }
+          },
+          required: ["questions"]
+        };
+
+        try {
+          const res = await callGeminiJSON(systemInstruction, userPrompt, schema);
+          const normalized = this.normalizeQuizQuestions(res.questions || []);
+          this.cache[cacheKey] = normalized;
+          this.saveCache();
+          return normalized;
+        } catch (e) {
+          if (this.cache[cacheKey]) return this.normalizeQuizQuestions(this.cache[cacheKey]);
+          return this.getFallbackQuizQuestions(lang, count);
+        }
+      }
+
+      getFallbackQuizQuestions(lang, count) {
+        const base = [
+          {
+            prompt: `What is printed by this ${lang.name} snippet?`,
+            codeSnippet: "a = 10\nb = 3\nprint(a // b)",
+            options: ["3.33", "3", "1", "30"],
+            correctOptionIndex: 1,
+            correctAnswerText: "3",
+            levelNumber: 2,
+            topicTag: "Floor Division & Math",
+            explanation: "The // operator performs floor (integer) division, so 10 // 3 is 3."
+          },
+          {
+            prompt: "What does this string slice evaluate to?",
+            codeSnippet: "word = \"CodeQuest\"\nprint(word[0:4])",
+            options: ["Code", "CodeQ", "Quest", "odeQ"],
+            correctOptionIndex: 0,
+            correctAnswerText: "Code",
+            levelNumber: 3,
+            topicTag: "String Slicing",
+            explanation: "Slicing [0:4] extracts characters at indices 0, 1, 2, and 3 (stop index 4 is excluded)."
+          },
+          {
+            prompt: "Which value is printed?",
+            codeSnippet: "x = 5\nif x > 10:\n    print(\"High\")\nelif x >= 5:\n    print(\"Mid\")\nelse:\n    print(\"Low\")",
+            options: ["High", "Mid", "Low", "None"],
+            correctOptionIndex: 1,
+            correctAnswerText: "Mid",
+            levelNumber: 5,
+            topicTag: "Conditionals (if/elif/else)",
+            explanation: "Since x is 5, x >= 5 is True, so the elif branch runs and prints Mid."
+          },
+          {
+            prompt: "How many numbers does range(1, 5) generate?",
+            codeSnippet: "print(list(range(1, 5)))",
+            options: ["[1, 2, 3, 4]", "[1, 2, 3, 4, 5]", "[0, 1, 2, 3, 4]", "[1, 5]"],
+            correctOptionIndex: 0,
+            correctAnswerText: "[1, 2, 3, 4]",
+            levelNumber: 7,
+            topicTag: "For Loops & Range",
+            explanation: "range(start, stop) starts at 1 and stops before 5."
+          },
+          {
+            prompt: "What does this function return when called as greet('Sam')?",
+            codeSnippet: "def greet(name, Title='Hero'):\n    return f'{Title} {name}'",
+            options: ["Hero Sam", "Sam Hero", "Error", "None"],
+            correctOptionIndex: 0,
+            correctAnswerText: "Hero Sam",
+            levelNumber: 8,
+            topicTag: "Functions & Default Args",
+            explanation: "The default parameter Title='Hero' is used when only one argument is passed."
+          }
+        ];
+        const out = [];
+        for (let i = 0; i < count; i++) {
+          const item = { ...base[i % base.length], levelNumber: Math.min(15, i + 1) };
+          out.push(item);
+        }
+        return out;
+      }
+
+      navigate(view) {
+        this.currentView = view;
+        this.renderAll();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      updateHeaderStats() {
+        const lang = this.getActiveLanguage();
+        const pill = document.getElementById("header-lang-pill");
+        if (pill) pill.textContent = lang.name;
+
+        const streakEl = document.getElementById("stat-streak");
+        if (streakEl) streakEl.textContent = this.state.streak;
+
+        const xpEl = document.getElementById("stat-xp");
+        if (xpEl) xpEl.textContent = `${this.state.xp} XP`;
+
+        const lvlEl = document.getElementById("stat-player-lvl");
+        if (lvlEl) lvlEl.textContent = `Lv ${this.getPlayerLevel()}`;
+
+        const heartsEl = document.getElementById("stat-hearts");
+        if (heartsEl) heartsEl.textContent = this.state.hearts;
+
+        const dueCount = this.getDueReviewItems().length;
+        const badge = document.getElementById("review-badge");
+        if (badge) {
+          badge.classList.toggle("hidden", dueCount === 0);
+        }
+
+        document.querySelectorAll(".nav-btn").forEach(btn => {
+          const isMatch = btn.dataset.nav === this.currentView;
+          btn.className = `nav-btn relative flex flex-col items-center justify-center gap-1 w-20 py-1.5 rounded-xl transition-colors ${
+            isMatch ? "text-indigo-400 font-semibold bg-indigo-500/10" : "text-slate-400 hover:text-slate-200 font-medium"
+          }`;
+        });
+      }
+
+      renderAll() {
+        this.updateHeaderStats();
+        this.renderMainView();
+      }
+
+      renderMainView() {
+        const container = document.getElementById("main-view");
+        if (!container) return;
+
+        if (this.currentView === "home") {
+          container.innerHTML = this.renderHomeView();
+        } else if (this.currentView === "levels") {
+          container.innerHTML = this.renderLevelsView();
+        } else if (this.currentView === "session") {
+          container.innerHTML = this.renderSessionView();
+        } else if (this.currentView === "quiz") {
+          container.innerHTML = this.renderQuizView();
+        } else if (this.currentView === "review") {
+          container.innerHTML = this.renderReviewView();
+        } else if (this.currentView === "badges") {
+          container.innerHTML = this.renderBadgesView();
+        }
+      }
+
+      renderHomeView() {
+        const activeLang = this.getActiveLanguage();
+        const langState = this.getActiveLangState();
+        const curLvlNum = langState.currentLevel || 1;
+        const curLvlMeta = activeLang.levels.find(l => l.number === curLvlNum) || activeLang.levels[0];
+        const completedCount = Object.keys(langState.completedLevels || {}).length;
+
+        const daily = this.state.daily;
+        const dailyTotalSteps = CONFIG.dailyGoal.targetChallenges + CONFIG.dailyGoal.targetReviewSets;
+        const dailyCurrentSteps = Math.min(CONFIG.dailyGoal.targetChallenges, daily.challengesDone) +
+                                  Math.min(CONFIG.dailyGoal.targetReviewSets, daily.reviewSetsDone);
+        const dailyPct = Math.round((dailyCurrentSteps / dailyTotalSteps) * 100);
+        const dailyDone = this.isDailyGoalComplete();
+
+        return `
+          <div class="space-y-6 animate-pop">
+            <!-- Hero Continue Card + Placement Banner -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-slate-900 border border-indigo-500/30 p-5 sm:p-7 shadow-2xl">
+              <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="space-y-2.5 max-w-xl">
+                  <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
+                    <i class="${activeLang.icon}"></i>
+                    <span>World ${activeLang.order} of 9 • ${activeLang.name}</span>
+                    ${langState.earlyUnlocked ? `<span class="text-amber-300">(Early Unlock)</span>` : ""}
+                  </div>
+                  <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+                    Level ${curLvlMeta.number}: ${this.escapeHTML(curLvlMeta.title)}
+                  </h1>
+                  <p class="text-sm text-slate-300 leading-relaxed">
+                    ${this.escapeHTML(curLvlMeta.topic)} • 30-sec lesson, 4 challenges &amp; 1 Boss challenge.
+                  </p>
+                  <div class="pt-1 flex items-center gap-3 text-xs text-slate-400">
+                    <span><i class="fa-solid fa-check-circle text-emerald-400 mr-1"></i>${completedCount}/15 Levels Passed</span>
+                    <span>•</span>
+                    <span><i class="fa-solid fa-shield-halved text-indigo-400 mr-1"></i>80% required to advance</span>
+                  </div>
+                </div>
+
+                <!-- ONE BIG CONTINUE BUTTON -->
+                <div class="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+                  <button onclick="app.startLevel(${curLvlMeta.number})" class="btn-game pulse-ring px-7 py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-extrabold text-base sm:text-lg shadow-xl shadow-indigo-600/30 flex items-center justify-center gap-3">
+                    <span>Continue Level ${curLvlMeta.number}</span>
+                    <i class="fa-solid fa-play text-sm"></i>
+                  </button>
+
+                  ${!langState.placementTaken && completedCount < 3 ? `
+                    <button onclick="app.startQuiz('placement')" class="btn-game px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-compass text-indigo-400"></i>
+                      <span>Know ${activeLang.name}? Take 10-Q Placement Test</span>
+                    </button>
+                  ` : `
+                    <button onclick="app.navigate('levels')" class="btn-game px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-slate-300 text-xs font-semibold flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                      <span>View All 15 Levels &amp; Final Exam</span>
+                    </button>
+                  `}
+                </div>
+              </div>
+            </div>
+
+            <!-- 15-Minute Daily Goal Card -->
+            <div class="rounded-2xl bg-slate-900/90 border ${dailyDone ? 'border-emerald-500/40 bg-emerald-950/15' : 'border-slate-800'} p-5">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold uppercase tracking-wider ${dailyDone ? 'text-emerald-400' : 'text-amber-400'}">
+                      <i class="fa-solid ${dailyDone ? 'fa-circle-check' : 'fa-clock'} mr-1"></i>
+                      ${dailyDone ? 'Done for today!' : 'Daily Goal (~15 Mins)'}
+                    </span>
+                    <span class="text-xs text-slate-400">• ${dailyPct}% complete</span>
+                  </div>
+                  <p class="text-sm text-slate-200 font-medium">
+                    ${dailyDone
+                      ? "You hit your daily goal! Rest up—or enjoy optional bonus practice at your own pace."
+                      : `Complete ${CONFIG.dailyGoal.targetChallenges} challenges (${Math.min(3, daily.challengesDone)}/3) + ${CONFIG.dailyGoal.targetReviewSets} review set (${Math.min(1, daily.reviewSetsDone)}/1).`}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  ${dailyDone ? `
+                    <button onclick="app.startLevel(${curLvlMeta.number})" class="btn-game px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+                      Optional Bonus Practice
+                    </button>
+                  ` : `
+                    <button onclick="app.navigate('review')" class="btn-game px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200">
+                      <i class="fa-solid fa-rotate mr-1 text-indigo-400"></i>Review Set (${Math.min(1, daily.reviewSetsDone)}/1)
+                    </button>
+                  `}
+                </div>
+              </div>
+
+              <!-- Progress bar -->
+              <div class="mt-3.5 w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full transition-all duration-500 rounded-full ${dailyDone ? 'bg-emerald-500' : 'bg-gradient-to-r from-indigo-500 to-amber-400'}" style="width: ${dailyPct}%"></div>
+              </div>
+            </div>
+
+            <!-- The 9-Language Learning Path -->
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-route text-indigo-400"></i>
+                    <span>The 9-Language Mastery Path</span>
+                  </h2>
+                  <p class="text-xs text-slate-400">Master one language at a time. Pass a world's Final Exam (80%+) to unlock the next.</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                ${CONFIG.languages.map(lang => {
+                  const st = this.state.languages[lang.id];
+                  const isUnlocked = st?.unlocked;
+                  const isCurrent = this.state.activeLangId === lang.id;
+                  const lvlsDone = Object.keys(st?.completedLevels || {}).length;
+
+                  return `
+                    <div class="relative rounded-2xl p-4 border transition-all flex flex-col justify-between ${
+                      isCurrent
+                        ? "bg-indigo-950/40 border-indigo-500/60 shadow-lg shadow-indigo-500/10"
+                        : isUnlocked
+                          ? "bg-slate-900/90 border-slate-800 hover:border-slate-700"
+                          : "bg-slate-900/50 border-slate-800/70 opacity-85"
+                    }">
+                      <div>
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                          <div class="flex items-center gap-2.5">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
+                              isUnlocked ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-800 text-slate-500 border border-slate-700"
+                            }">
+                              <i class="${lang.icon}"></i>
+                            </div>
+                            <div>
+                              <div class="flex items-center gap-1.5">
+                                <span class="text-[11px] font-mono text-slate-400">#${lang.order}</span>
+                                <h3 class="font-bold text-white text-base">${lang.name}</h3>
+                              </div>
+                              <span class="text-[11px] ${isUnlocked ? 'text-emerald-400' : 'text-slate-400'} font-medium">
+                                ${isUnlocked ? `${lvlsDone}/15 Levels • Playable` : `<i class="fa-solid fa-lock mr-1 text-amber-400"></i>Locked World`}
+                              </span>
+                            </div>
+                          </div>
+
+                          ${isCurrent ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-indigo-500 text-white">Active</span>` : ""}
+                        </div>
+
+                        <p class="text-xs text-slate-300 leading-relaxed mt-2">
+                          <span class="text-slate-400 font-semibold">AI-Era Relevance:</span> ${this.escapeHTML(lang.aiEraWhy)}
+                        </p>
+                      </div>
+
+                      <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        ${isUnlocked ? `
+                          <button onclick="app.selectLanguage('${lang.id}')" class="w-full py-2 rounded-xl text-xs font-bold ${
+                            isCurrent ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                          } transition-colors">
+                            ${isCurrent ? "Open Levels Map" : `Switch to ${lang.name}`}
+                          </button>
+                        ` : `
+                          <button onclick="app.promptEarlyUnlock('${lang.id}')" class="w-full py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-slate-300 flex items-center justify-center gap-1.5 transition-colors">
+                            <i class="fa-solid fa-unlock-keyhole text-amber-400"></i>
+                            <span>Unlock Early</span>
+                          </button>
+                        `}
+                      </div>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      renderLevelsView() {
+        const lang = this.getActiveLanguage();
+        const st = this.getActiveLangState();
+        const completedCount = Object.keys(st.completedLevels || {}).length;
+        const canTakeExam = st.unlockedUpTo >= 15 || completedCount >= 15;
+
+        return `
+          <div class="space-y-6 animate-pop">
+            <!-- Header bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-5">
+              <div>
+                <div class="flex items-center gap-2 text-xs text-indigo-400 font-semibold mb-1">
+                  <i class="${lang.icon}"></i>
+                  <span>World ${lang.order} • ${lang.name} Curriculum</span>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-white">15 Levels to Mastery</h1>
+                <p class="text-xs text-slate-400 mt-0.5">Score at least 80% (4/5 challenges) on a level to unlock the next.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="app.startQuiz('placement')" class="btn-game px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 flex items-center gap-2">
+                  <i class="fa-solid fa-compass text-indigo-400"></i>
+                  <span>10-Q Placement Test</span>
+                </button>
+                <button onclick="app.startQuiz('final_exam')" class="btn-game px-3.5 py-2 rounded-xl ${
+                  canTakeExam ? "bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold" : "bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-semibold"
+                } text-xs flex items-center gap-2">
+                  <i class="fa-solid fa-graduation-cap"></i>
+                  <span>Final Exam (15 Qs)</span>
+                </button>
+              </div>
+            </div>
+
+            ${lang.executionMode === "ai" ? `
+              <div class="rounded-xl bg-amber-950/30 border border-amber-500/30 px-4 py-3 text-xs text-amber-200 flex items-center gap-2.5">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                <span><strong>Note for ${lang.name}:</strong> "Write It" code challenges in this world are evaluated by AI judging (note that AI judging can occasionally be wrong). Python uses live in-browser Pyodide execution.</span>
+              </div>
+            ` : ""}
+
+            <!-- 15 Levels Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              ${lang.levels.map(lvl => {
+                const isUnlocked = lvl.number <= (st.unlockedUpTo || 1);
+                const comp = st.completedLevels?.[lvl.number];
+                const isCurrent = lvl.number === st.currentLevel;
+
+                return `
+                  <div class="rounded-2xl p-4 border transition-all flex flex-col justify-between ${
+                    isCurrent
+                      ? "bg-indigo-950/40 border-indigo-500/60 shadow-lg shadow-indigo-500/10"
+                      : isUnlocked
+                        ? "bg-slate-900/90 border-slate-800 hover:border-slate-700"
+                        : "bg-slate-900/40 border-slate-800/60 opacity-65"
+                  }">
+                    <div>
+                      <div class="flex items-center justify-between gap-2 mb-2">
+                        <span class="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold ${
+                          comp ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : isUnlocked ? "bg-indigo-500/20 text-indigo-300" : "bg-slate-800 text-slate-500"
+                        }">
+                          Level ${lvl.number}
+                        </span>
+                        ${comp ? `
+                          <span class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                            <i class="fa-solid fa-check-circle"></i> ${comp.bestScore}%
+                          </span>
+                        ` : !isUnlocked ? `
+                          <i class="fa-solid fa-lock text-slate-500 text-xs"></i>
+                        ` : `
+                          <span class="text-[11px] text-indigo-400 font-semibold">Ready</span>
+                        `}
+                      </div>
+                      <h3 class="font-bold text-white text-base">${this.escapeHTML(lvl.title)}</h3>
+                      <p class="text-xs text-slate-400 mt-1 leading-relaxed">${this.escapeHTML(lvl.topic)}</p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center gap-2">
+                      ${isUnlocked ? `
+                        <button onclick="app.startLevel(${lvl.number})" class="btn-game flex-1 py-2.5 rounded-xl text-xs font-bold ${
+                          isCurrent ? "bg-indigo-600 hover:bg-indigo-500 text-white" : "bg-slate-800 hover:bg-slate-700 text-slate-200"
+                        }">
+                          ${comp ? "Replay Level" : "Start Level"}
+                        </button>
+                        ${this.cache[`${lang.id}_lvl_${lvl.number}`] ? `
+                          <button onclick="app.startLevel(${lvl.number}, true)" title="Generate fresh AI questions" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white text-xs">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                          </button>
+                        ` : ""}
+                      ` : `
+                        <button disabled class="w-full py-2.5 rounded-xl bg-slate-800/50 text-slate-500 text-xs font-semibold cursor-not-allowed">
+                          Pass Level ${lvl.number - 1} (80%+) to Unlock
+                        </button>
+                      `}
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+
+            <!-- Final Exam Card -->
+            <div class="rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <div class="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+                  <i class="fa-solid fa-crown"></i>
+                  <span>World Boss • ${lang.name} Final Exam</span>
+                </div>
+                <h3 class="text-lg font-extrabold text-white mt-1">15 Mixed Questions • 80% Required to Unlock Next Language</h3>
+                <p class="text-xs text-slate-300 mt-0.5">
+                  ${st.finalExamPassed
+                    ? `Passed! Best Score: ${st.finalExamBestScore}%. You unlocked the next language world.`
+                    : "Covers all 15 levels. If you fall short, we'll highlight the exact topics to review."}
+                </p>
+              </div>
+              <button onclick="app.startQuiz('final_exam')" class="btn-game px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm shrink-0">
+                ${st.finalExamPassed ? "Retake Final Exam" : "Start Final Exam"}
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      async startLevel(levelNumber, forceRegenerate = false) {
+        if (this.state.hearts <= 0) {
+          this.openHeartsModal();
+          return;
+        }
+        const lang = this.getActiveLanguage();
+        const langState = this.getActiveLangState();
+        langState.currentLevel = levelNumber;
+        this.saveState();
+
+        this.currentView = "session";
+        this.session = {
+          loading: true,
+          langId: lang.id,
+          levelNumber
+        };
+        this.renderAll();
+
+        const data = await this.fetchOrGenerateLevelContent(lang.id, levelNumber, forceRegenerate);
+        this.initLevelSession(levelNumber, data);
+      }
+
+      initLevelSession(levelNumber, data) {
+        this.session = {
+          mode: "level",
+          langId: this.state.activeLangId,
+          levelNumber,
+          data,
+          step: "lesson", // 'lesson' | 'challenge' | 'summary'
+          challengeIndex: 0,
+          correctCount: 0,
+          missedTopics: [],
+          selectedBugLine: null,
+          selectedOption: null,
+          gapInput: "",
+          editorCode: "",
+          showHint: false,
+          attemptSubmitted: false,
+          lastAttemptCorrect: false,
+          lastFeedbackText: "",
+          testResults: null,
+          aiJudgeNote: ""
+        };
+        this.renderAll();
+
+        // Pre-verify any Python predict_output challenges using Pyodide in the background
+        if (this.getActiveLanguage().executionMode === "pyodide" && Array.isArray(data?.challenges)) {
+          data.challenges.forEach(ch => {
+            if (ch.type === "predict_output") {
+              this.reconcileQuestionWithPyodide(ch);
+            }
+          });
+        }
+      }
+
+      beginChallengesFromLesson() {
+        if (!this.session) return;
+        this.session.step = "challenge";
+        this.prepareChallengeState(0);
+        this.renderAll();
+      }
+
+      prepareChallengeState(idx) {
+        const s = this.session;
+        const ch = s.data.challenges[idx];
+        s.challengeIndex = idx;
+        s.selectedBugLine = null;
+        s.selectedOption = null;
+        s.gapInput = "";
+        s.editorCode = ch?.starterCode || "";
+        s.showHint = false;
+        s.attemptSubmitted = false;
+        s.lastAttemptCorrect = false;
+        s.lastFeedbackText = "";
+        s.testResults = null;
+        s.aiJudgeNote = "";
+      }
+
+      renderSessionView() {
+        const s = this.session;
+        if (!s || s.loading) {
+          return `
+            <div class="py-20 flex flex-col items-center justify-center text-center space-y-4">
+              <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 text-2xl animate-spin">
+                <i class="fa-solid fa-circle-notch"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white">Crafting Level ${s?.levelNumber || ""} with Gemini AI...</h2>
+                <p class="text-xs text-slate-400 mt-1">Generating a 30-second lesson, 4 interactive challenges, and 1 Boss challenge.</p>
+              </div>
+            </div>
+          `;
+        }
+
+        if (s.step === "lesson") {
+          return this.renderLessonStep(s);
+        }
+        if (s.step === "summary") {
+          return this.renderLevelSummaryStep(s);
+        }
+        return this.renderChallengeStep(s);
+      }
+
+      renderLessonStep(s) {
+        const { lesson, levelTitle } = s.data;
+        return `
+          <div class="max-w-2xl mx-auto space-y-5 animate-pop">
+            <div class="flex items-center justify-between">
+              <button onclick="app.navigate('levels')" class="text-xs font-semibold text-slate-400 hover:text-white flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-left"></i> Back to Levels
+              </button>
+              <span class="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold">
+                <i class="fa-solid fa-bolt mr-1"></i>30-Second Lesson
+              </span>
+            </div>
+
+            <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 sm:p-8 space-y-5 shadow-2xl">
+              <div>
+                <span class="text-xs font-mono uppercase text-indigo-400 font-bold">Level ${s.levelNumber}</span>
+                <h1 class="text-2xl font-extrabold text-white mt-0.5">${this.escapeHTML(levelTitle)}</h1>
+              </div>
+
+              <p class="text-sm sm:text-base text-slate-200 leading-relaxed">
+                ${this.escapeHTML(lesson.summary)}
+              </p>
+
+              <div class="space-y-2 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-4">
+                <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Key Ideas</div>
+                <ul class="space-y-1.5 text-xs sm:text-sm text-slate-300">
+                  ${(lesson.keyPoints || []).map(kp => `
+                    <li class="flex items-start gap-2">
+                      <i class="fa-solid fa-check text-emerald-400 mt-1 text-xs"></i>
+                      <span>${this.escapeHTML(kp)}</span>
+                    </li>
+                  `).join("")}
+                </ul>
+              </div>
+
+              <!-- One Example -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-400 font-semibold">
+                  <span>Example Code</span>
+                  <span class="font-mono text-indigo-400">${this.getActiveLanguage().name}</span>
+                </div>
+                <pre class="code-font text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-indigo-200 leading-relaxed">${this.escapeHTML(lesson.exampleCode)}</pre>
+                <div class="rounded-xl bg-slate-950/90 border border-slate-800/80 px-4 py-2.5 text-xs font-mono text-emerald-300">
+                  <span class="text-slate-500 select-none">Output &gt; </span>${this.escapeHTML(lesson.exampleOutput)}
+                </div>
+                <p class="text-xs text-slate-400 italic">${this.escapeHTML(lesson.exampleTakeaway)}</p>
+              </div>
+
+              <button onclick="app.beginChallengesFromLesson()" class="btn-game w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-base shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-2">
+                <span>Start 5 Challenges</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      renderChallengeStep(s) {
+        const challenges = s.data.challenges;
+        const ch = challenges[s.challengeIndex];
+        const total = challenges.length;
+        const progressPct = Math.round(((s.challengeIndex) / total) * 100);
+        const lang = this.getActiveLanguage();
+
+        const typeBadgeMap = {
+          bug_hunt: { label: "Bug Hunt", icon: "fa-solid fa-bug", color: "rose" },
+          predict_output: { label: "Predict the Output", icon: "fa-solid fa-terminal", color: "cyan" },
+          fill_gap: { label: "Fill the Gap", icon: "fa-solid fa-puzzle-piece", color: "amber" },
+          write_it: { label: "Write It", icon: "fa-solid fa-code", color: "emerald" }
+        };
+        const tBadge = typeBadgeMap[ch.type] || typeBadgeMap.predict_output;
+
+        return `
+          <div class="max-w-2xl mx-auto space-y-5 animate-pop">
+            <!-- Top progress bar -->
+            <div class="flex items-center gap-3">
+              <button onclick="app.navigate('levels')" class="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+              <div class="flex-1 h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                <div class="h-full bg-indigo-500 transition-all duration-300" style="width: ${progressPct}%"></div>
+              </div>
+              <span class="text-xs font-mono font-bold text-slate-400">${s.challengeIndex + 1}/${total}</span>
+            </div>
+
+            <!-- Challenge Card -->
+            <div class="rounded-3xl bg-slate-900 border ${ch.isBoss ? 'border-amber-500/50 shadow-amber-500/10' : 'border-slate-800'} p-5 sm:p-7 space-y-5 shadow-2xl">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-bold flex items-center gap-1.5">
+                    <i class="${tBadge.icon} text-indigo-400"></i>
+                    <span>${tBadge.label}</span>
+                  </span>
+                  ${ch.isBoss ? `
+                    <span class="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-extrabold flex items-center gap-1">
+                      <i class="fa-solid fa-skull"></i> BOSS CHALLENGE
+                    </span>
+                  ` : ""}
+                </div>
+                <button onclick="app.toggleHint()" class="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                  <i class="fa-regular fa-lightbulb"></i>
+                  <span>${s.showHint ? "Hide Hint" : "Need a Hint?"}</span>
+                </button>
+              </div>
+
+              <div>
+                <h2 class="text-lg sm:text-xl font-extrabold text-white">${this.escapeHTML(ch.title)}</h2>
+                <p class="text-sm text-slate-300 mt-1 leading-relaxed">${this.escapeHTML(ch.prompt)}</p>
+              </div>
+
+              ${s.showHint ? `
+                <div class="rounded-xl bg-amber-950/40 border border-amber-500/30 px-4 py-3 text-xs text-amber-200 flex items-start gap-2">
+                  <i class="fa-solid fa-lightbulb text-amber-400 mt-0.5"></i>
+                  <span><strong>Hint (No spoilers):</strong> ${this.escapeHTML(ch.hint)}</span>
+                </div>
+              ` : ""}
+
+              <!-- Interactive Challenge Body by Type -->
+              ${this.renderChallengeBody(ch, s, lang)}
+
+              <!-- Feedback Banner (shown only AFTER attempt) -->
+              ${s.attemptSubmitted ? `
+                <div class="rounded-2xl p-4 border ${
+                  s.lastAttemptCorrect
+                    ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200"
+                    : "bg-rose-950/40 border-rose-500/40 text-rose-200"
+                } space-y-2 animate-pop">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 font-extrabold text-sm">
+                      <i class="fa-solid ${s.lastAttemptCorrect ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-400'} text-base"></i>
+                      <span>${s.lastAttemptCorrect ? "Spot on! +20 XP" : "Not quite — let's see why:"}</span>
+                    </div>
+                    ${!s.lastAttemptCorrect ? `
+                      <button onclick="app.overrideMarkCorrect()" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-slate-300 hover:text-emerald-300 transition-colors">
+                        ✓ My Answer Was Right
+                      </button>
+                    ` : ""}
+                  </div>
+                  <p class="text-xs sm:text-sm leading-relaxed">
+                    ${this.escapeHTML(s.lastFeedbackText || ch.explanationAfterAttempt)}
+                  </p>
+                </div>
+              ` : ""}
+
+              <!-- Action Button -->
+              <div class="pt-2">
+                ${!s.attemptSubmitted ? `
+                  <button id="submit-challenge-btn" onclick="app.submitChallengeAttempt()" class="btn-game w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-indigo-600/20">
+                    ${ch.type === "write_it" ? (lang.executionMode === "pyodide" ? "Run Python & Check Tests" : "Run AI Code Judge") : "Check Answer"}
+                  </button>
+                ` : `
+                  <button onclick="app.nextChallenge()" class="btn-game w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm sm:text-base flex items-center justify-center gap-2">
+                    <span>${s.challengeIndex + 1 < total ? "Next Challenge" : "Finish Level"}</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      renderChallengeBody(ch, s, lang) {
+        if (ch.type === "bug_hunt") {
+          const lines = Array.isArray(ch.codeLines) && ch.codeLines.length > 0
+            ? ch.codeLines
+            : (ch.codeSnippet || "").split("\n");
+          const options = Array.isArray(ch.bugOptions) && ch.bugOptions.length > 0
+            ? ch.bugOptions
+            : (ch.options || ["Syntax/type error on this line", "Infinite loop", "Off-by-one index", "Scope error"]);
+
+          return `
+            <div class="space-y-4">
+              <div class="space-y-1.5">
+                <div class="text-xs font-semibold text-slate-400">Step 1: Tap the buggy line of code</div>
+                <div class="rounded-2xl bg-slate-950 border border-slate-800 p-3 space-y-1 code-font text-xs sm:text-sm">
+                  ${lines.map((line, idx) => {
+                    const selected = s.selectedBugLine === idx;
+                    return `
+                      <button
+                        ${s.attemptSubmitted ? "disabled" : ""}
+                        onclick="app.selectBugLine(${idx})"
+                        class="w-full text-left px-3 py-2 rounded-xl flex items-center gap-3 transition-colors ${
+                          selected
+                            ? "bg-rose-500/20 border border-rose-500/50 text-rose-200"
+                            : "hover:bg-slate-900 text-slate-300 border border-transparent"
+                        }">
+                        <span class="text-slate-600 select-none w-5 text-right">${idx + 1}</span>
+                        <span class="whitespace-pre-wrap break-all">${this.escapeHTML(line)}</span>
+                      </button>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="text-xs font-semibold text-slate-400">Step 2: Explain why that line is buggy</div>
+                <div class="grid grid-cols-1 gap-2">
+                  ${options.map((opt, idx) => {
+                    const selected = s.selectedOption === idx;
+                    return `
+                      <button
+                        ${s.attemptSubmitted ? "disabled" : ""}
+                        onclick="app.selectOption(${idx})"
+                        class="w-full text-left p-3.5 rounded-xl border text-xs sm:text-sm font-medium transition-all ${
+                          selected
+                            ? "bg-indigo-600/25 border-indigo-500 text-white"
+                            : "bg-slate-950/80 border-slate-800 hover:border-slate-700 text-slate-300"
+                        }">
+                        ${this.escapeHTML(opt)}
+                      </button>
+                    `;
+                  }).join("")}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (ch.type === "predict_output") {
+          const options = ch.options || [];
+          return `
+            <div class="space-y-4">
+              <pre class="code-font text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-indigo-200 leading-relaxed">${this.escapeHTML(ch.codeSnippet || "")}</pre>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                ${options.map((opt, idx) => {
+                  const selected = s.selectedOption === idx;
+                  return `
+                    <button
+                      ${s.attemptSubmitted ? "disabled" : ""}
+                      onclick="app.selectOption(${idx})"
+                      class="p-4 rounded-2xl border text-left code-font text-xs sm:text-sm font-semibold transition-all ${
+                        selected
+                          ? "bg-indigo-600/25 border-indigo-500 text-white shadow-lg shadow-indigo-500/10"
+                          : "bg-slate-950/90 border-slate-800 hover:border-slate-700 text-slate-200"
+                      }">
+                      ${this.escapeHTML(opt)}
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          `;
+        }
+
+        if (ch.type === "fill_gap") {
+          const template = ch.gapCodeTemplate || ch.codeSnippet || "result = ___";
+          const choices = ch.gapChoices || ch.options || [];
+          return `
+            <div class="space-y-4">
+              <pre class="code-font text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-amber-200 leading-relaxed">${this.escapeHTML(template)}</pre>
+
+              <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-400">Type the missing part or tap a choice below:</label>
+                <input
+                  type="text"
+                  ${s.attemptSubmitted ? "disabled" : ""}
+                  value="${this.escapeHTML(s.gapInput)}"
+                  oninput="app.updateGapInput(this.value)"
+                  placeholder="Fill the ___ gap..."
+                  class="w-full px-4 py-3 rounded-xl bg-slate-950 border border-slate-700 focus:border-indigo-500 focus:outline-none code-font text-sm text-white"
+                />
+              </div>
+
+              ${choices.length > 0 ? `
+                <div class="flex flex-wrap gap-2">
+                  ${choices.map((c, idx) => `
+                    <button
+                      ${s.attemptSubmitted ? "disabled" : ""}
+                      onclick="app.setGapChoiceByIndex(${idx})"
+                      class="px-3.5 py-2 rounded-xl border code-font text-xs font-semibold transition-colors ${
+                        s.gapInput === c
+                          ? "bg-indigo-600 border-indigo-400 text-white"
+                          : "bg-slate-950 border-slate-800 hover:border-slate-700 text-slate-300"
+                      }">
+                      ${this.escapeHTML(c)}
+                    </button>
+                  `).join("")}
+                </div>
+              ` : ""}
+            </div>
+          `;
+        }
+
+        // 4. Write It
+        const tests = ch.testCases || [];
+        return `
+          <div class="space-y-4">
+            <div class="rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+              <div class="px-4 py-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
+                <span class="font-mono font-semibold text-indigo-300">
+                  <i class="${lang.icon} mr-1"></i>${lang.name} Editor
+                </span>
+                <span>${lang.executionMode === "pyodide" ? "Pyodide In-Browser Runner" : "AI Judge Mode"}</span>
+              </div>
+              <textarea
+                id="code-editor-input"
+                rows="6"
+                spellcheck="false"
+                onkeydown="if(event.key==='Tab'){event.preventDefault();const start=this.selectionStart;const end=this.selectionEnd;this.value=this.value.substring(0,start)+'    '+this.value.substring(end);this.selectionStart=this.selectionEnd=start+4;app.updateEditorCode(this.value);}"
+                oninput="app.updateEditorCode(this.value)"
+                class="w-full p-4 bg-slate-950 text-emerald-300 code-font text-xs sm:text-sm focus:outline-none resize-y leading-relaxed"
+                placeholder="Write your ${lang.name} code here...">${this.escapeHTML(s.editorCode)}</textarea>
+            </div>
+
+            ${lang.executionMode === "ai" ? `
+              <div class="text-[11px] text-amber-300/90 flex items-center gap-1.5">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Note: ${lang.name} Write-It uses AI judging. Remember that AI judging can occasionally be wrong.</span>
+              </div>
+            ` : ""}
+
+            <!-- Test Cases List -->
+            <div class="space-y-2">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Test Cases</div>
+              <div class="space-y-1.5">
+                ${tests.map((tc, idx) => {
+                  const res = s.testResults?.results?.[idx];
+                  return `
+                    <div class="px-3.5 py-2.5 rounded-xl bg-slate-950 border ${
+                      !res ? "border-slate-800" : res.passed ? "border-emerald-500/40 bg-emerald-950/20" : "border-rose-500/40 bg-rose-950/20"
+                    } flex items-center justify-between gap-2 text-xs">
+                      <div class="flex items-center gap-2">
+                        <i class="fa-solid ${
+                          !res ? "fa-circle text-slate-700" : res.passed ? "fa-circle-check text-emerald-400" : "fa-circle-xmark text-rose-400"
+                        }"></i>
+                        <span class="text-slate-200 font-medium">${this.escapeHTML(tc.description)}</span>
+                      </div>
+                      <code class="code-font text-[11px] text-slate-400 hidden sm:inline">${this.escapeHTML(tc.assertion)}</code>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+
+            ${s.testResults?.stdout ? `
+              <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 text-xs code-font text-slate-300">
+                <div class="text-[10px] uppercase text-slate-500 mb-1">Console Output (stdout)</div>
+                <div class="whitespace-pre-wrap">${this.escapeHTML(s.testResults.stdout)}</div>
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }
+
+      selectBugLine(idx) {
+        if (!this.session || this.session.attemptSubmitted) return;
+        this.session.selectedBugLine = idx;
+        this.renderMainView();
+      }
+
+      selectOption(idx) {
+        if (!this.session || this.session.attemptSubmitted) return;
+        this.session.selectedOption = idx;
+        this.renderMainView();
+      }
+
+      updateGapInput(val) {
+        if (!this.session || this.session.attemptSubmitted) return;
+        this.session.gapInput = val;
+      }
+
+      setGapChoice(val) {
+        if (!this.session || this.session.attemptSubmitted) return;
+        this.session.gapInput = val;
+        this.renderMainView();
+      }
+
+      setGapChoiceByIndex(idx) {
+        if (!this.session || this.session.attemptSubmitted) return;
+        const ch = this.session.data.challenges[this.session.challengeIndex];
+        const choices = ch.gapChoices || ch.options || [];
+        if (choices[idx] !== undefined) {
+          this.session.gapInput = choices[idx];
+          this.renderMainView();
+        }
+      }
+
+      normalizeCodeToken(str) {
+        return String(str ?? "")
+          .trim()
+          .replace(/['"`]/g, "'")
+          .replace(/\s+/g, " ")
+          .replace(/;$/, "");
+      }
+
+      overrideMarkCorrect() {
+        const s = this.session;
+        if (!s || !s.attemptSubmitted || s.lastAttemptCorrect) return;
+        s.lastAttemptCorrect = true;
+        s.correctCount++;
+        this.state.xp += 20;
+        if (this.state.hearts < CONFIG.maxHearts) {
+          this.state.hearts++;
+        }
+        this.sfx.play("correct");
+        this.showToast("Marked as correct! +20 XP & Heart restored", "emerald", "fa-solid fa-check");
+        this.saveState();
+        this.renderAll();
+      }
+
+      updateEditorCode(val) {
+        if (!this.session) return;
+        this.session.editorCode = val;
+      }
+
+      toggleHint() {
+        if (!this.session) return;
+        this.session.showHint = !this.session.showHint;
+        this.renderMainView();
+      }
+
+      async submitChallengeAttempt() {
+        const s = this.session;
+        if (!s || s.attemptSubmitted) return;
+        const ch = s.data.challenges[s.challengeIndex];
+        const lang = this.getActiveLanguage();
+
+        const btn = document.getElementById("submit-challenge-btn");
+        if (btn) {
+          btn.disabled = true;
+          btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin mr-2"></i>Checking...`;
+        }
+
+        let isCorrect = false;
+        let userSummary = "";
+
+        if (ch.type === "bug_hunt") {
+          if (s.selectedBugLine === null || s.selectedOption === null) {
+            this.showToast("Tap both the buggy line AND the explanation!", "amber");
+            this.renderMainView();
+            return;
+          }
+          const selectedLineStr = (ch.codeLines?.[s.selectedBugLine] || "").trim();
+          const expectedLineStr = (ch.buggyLineText || ch.codeLines?.[ch.buggyLineIndex] || "").trim();
+          const chosenOptText = (ch.bugOptions?.[s.selectedOption] || "").trim();
+
+          const optionMatch = (s.selectedOption === ch.correctBugOptionIndex) ||
+            (ch.correctBugOptionText && this.findMatchingOptionIndex(ch.bugOptions, ch.correctBugOptionText) === s.selectedOption);
+
+          // Accept exact line match, text match, or 1-based vs 0-based off-by-one when the bug explanation is right
+          const lineMatch = (s.selectedBugLine === ch.buggyLineIndex) ||
+            (expectedLineStr && selectedLineStr === expectedLineStr) ||
+            (optionMatch && Math.abs(s.selectedBugLine - (ch.buggyLineIndex ?? 0)) <= 1);
+
+          isCorrect = lineMatch && optionMatch;
+          userSummary = `Selected line ${s.selectedBugLine + 1} ("${selectedLineStr}") and option "${chosenOptText}"`;
+          if (isCorrect) {
+            this.state.stats.bugHuntsSolved++;
+            if (this.state.stats.bugHuntsSolved >= 5) this.unlockBadge("bug_slayer");
+          }
+        } else if (ch.type === "predict_output") {
+          if (s.selectedOption === null) {
+            this.showToast("Select what the code prints first!", "amber");
+            this.renderMainView();
+            return;
+          }
+          // Ground-truth verify with Pyodide right before grading in case AI answer key index was off
+          if (lang.executionMode === "pyodide") {
+            await this.reconcileQuestionWithPyodide(ch);
+          }
+          const chosenText = (ch.options?.[s.selectedOption] || "").trim();
+          const matchedByText = ch.correctAnswerText
+            ? this.findMatchingOptionIndex(ch.options, ch.correctAnswerText) === s.selectedOption
+            : false;
+          isCorrect = (s.selectedOption === ch.correctOptionIndex) || matchedByText;
+          if (isCorrect) ch.correctOptionIndex = s.selectedOption;
+          userSummary = `Selected output ${chosenText}`;
+        } else if (ch.type === "fill_gap") {
+          const cleanInput = (s.gapInput || "").trim();
+          if (!cleanInput) {
+            this.showToast("Complete the missing code gap first!", "amber");
+            this.renderMainView();
+            return;
+          }
+          const accepted = [
+            ...(ch.acceptedGapAnswers || []),
+            ...(ch.correctAnswerText ? [ch.correctAnswerText] : [])
+          ].map(a => a.trim()).filter(Boolean);
+
+          const normInput = this.normalizeCodeToken(cleanInput);
+          const strippedInput = this.stripSurroundingQuotes(cleanInput);
+          const canonInput = this.canonicalizeOutput(cleanInput);
+
+          isCorrect = accepted.some(
+            a =>
+              this.normalizeCodeToken(a) === normInput ||
+              this.stripSurroundingQuotes(a) === strippedInput ||
+              this.canonicalizeOutput(a) === canonInput
+          ) || (ch.gapChoices && ch.gapChoices[0] && this.normalizeCodeToken(ch.gapChoices[0]) === normInput && accepted.length === 0);
+
+          // Pyodide equivalence check for fill_gap in Python
+          if (!isCorrect && lang.executionMode === "pyodide" && ch.gapCodeTemplate && ch.gapCodeTemplate.includes("___") && accepted.length > 0) {
+            const userFullCode = ch.gapCodeTemplate.replace("___", cleanInput);
+            const expectedFullCode = ch.gapCodeTemplate.replace("___", accepted[0]);
+            const [userTruth, expTruth] = await Promise.all([
+              this.pyRunner.evaluateSnippetGroundTruth(userFullCode),
+              this.pyRunner.evaluateSnippetGroundTruth(expectedFullCode)
+            ]);
+            if (userTruth && expTruth && !userTruth.err && !expTruth.err) {
+              if (userTruth.stdout && userTruth.stdout === expTruth.stdout) {
+                isCorrect = true;
+              } else if (!expTruth.stdout && JSON.stringify(userTruth.varsObj) === JSON.stringify(expTruth.varsObj)) {
+                isCorrect = true;
+              }
+            }
+          }
+
+          userSummary = `Filled gap with "${cleanInput}"`;
+        } else if (ch.type === "write_it") {
+          const code = (s.editorCode || "").trim();
+          if (!code) {
+            this.showToast("Write your solution in the code editor first!", "amber");
+            this.renderMainView();
+            return;
+          }
+          if (lang.executionMode === "pyodide") {
+            try {
+              const testRes = await this.pyRunner.runCodeWithTests(code, ch.testCases || []);
+              s.testResults = testRes;
+              isCorrect = testRes.allPassed;
+              if (!isCorrect && !testRes.runtimeError) {
+                const aiVerify = await this.judgeCodeWithAI(lang, ch, code);
+                if (aiVerify.allPassed) {
+                  isCorrect = true;
+                  s.testResults.results = (s.testResults.results || []).map(r => ({ ...r, passed: true, error: null }));
+                }
+              }
+              userSummary = `Wrote code:\n${code}`;
+            } catch (err) {
+              const aiRes = await this.judgeCodeWithAI(lang, ch, code);
+              s.testResults = aiRes;
+              isCorrect = aiRes.allPassed;
+              userSummary = `Wrote code:\n${code}`;
+            }
+          } else {
+            const aiRes = await this.judgeCodeWithAI(lang, ch, code);
+            s.testResults = aiRes;
+            isCorrect = aiRes.allPassed;
+            userSummary = `Wrote code:\n${code}`;
+          }
+          if (isCorrect) {
+            this.state.stats.writeItSolved++;
+            if (this.state.stats.writeItSolved >= 5) this.unlockBadge("py_runner");
+          }
+        }
+
+        s.attemptSubmitted = true;
+        s.lastAttemptCorrect = isCorrect;
+        s.lastFeedbackText = ch.explanationAfterAttempt;
+
+        if (isCorrect) {
+          this.sfx.play("correct");
+          s.correctCount++;
+          this.state.xp += 20;
+          this.state.stats.totalChallengesSolved++;
+          this.state.daily.challengesDone++;
+          this.state.adaptiveDifficulty = Math.min(100, this.state.adaptiveDifficulty + 4);
+          if (this. isDailyGoalComplete() && !this.state.daily.completedBannerShown) {
+            this.state.daily.completedBannerShown = true;
+            this.unlockBadge("daily_hero");
+          }
+        } else {
+          this.sfx.play("wrong");
+          this.state.adaptiveDifficulty = Math.max(10, this.state.adaptiveDifficulty - 6);
+          if (this.state.hearts > 0) {
+            this.state.hearts--;
+            if (!this.state.lastHeartLostAt) this.state.lastHeartLostAt = Date.now();
+          }
+          s.missedTopics.push(ch.title);
+          this.enqueueReviewTopic(lang.id, `${s.data.levelTitle}: ${ch.title}`);
+
+          this.fetchConciseWhyWrongExplanation(lang, ch, userSummary);
+        }
+
+        this.saveState();
+        this.renderAll();
+      }
+
+      async judgeCodeWithAI(lang, ch, userCode) {
+        try {
+          const sys = `You are a fair, pragmatic code grader for ${lang.name}. Evaluate the user's code against the task prompt and each test case. Return JSON.`;
+          const usr = `Task: ${ch.prompt}\nTest Cases: ${JSON.stringify(ch.testCases || [])}\nUser Code:\n${userCode}`;
+          const schema = {
+            type: "OBJECT",
+            properties: {
+              allPassed: { type: "BOOLEAN" },
+              stdout: { type: "STRING" },
+              explanation: { type: "STRING" },
+              results: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    description: { type: "STRING" },
+                    assertion: { type: "STRING" },
+                    passed: { type: "BOOLEAN" }
+                  },
+                  required: ["description", "assertion", "passed"]
+                }
+              }
+            },
+            required: ["allPassed", "stdout", "explanation", "results"]
+          };
+          const res = await callGeminiJSON(sys, usr, schema);
+          if (res.explanation) {
+            this.session.lastFeedbackText = res.explanation;
+          }
+          return res;
+        } catch (e) {
+          const nonTrivial = userCode.length > 12 && userCode !== (ch.starterCode || "").trim();
+          return {
+            allPassed: nonTrivial,
+            stdout: "(Evaluated via local fallback)",
+            results: (ch.testCases || []).map(tc => ({
+              description: tc.description,
+              assertion: tc.assertion,
+              passed: nonTrivial
+            }))
+          };
+        }
+      }
+
+      async fetchConciseWhyWrongExplanation(lang, ch, userSummary) {
+        try {
+          const schema = {
+            type: "OBJECT",
+            properties: {
+              learnerWasActuallyCorrect: { type: "BOOLEAN" },
+              whyWrong: { type: "STRING" }
+            },
+            required: ["learnerWasActuallyCorrect", "whyWrong"]
+          };
+          const codeContext = ch.codeSnippet || (Array.isArray(ch.codeLines) ? ch.codeLines.join("\n") : ch.gapCodeTemplate || "");
+          const optionsContext = Array.isArray(ch.options) ? `Options: ${JSON.stringify(ch.options)}` : "";
+          const sys = `You are a precise programming tutor for ${lang.name}.
+First, check if the learner's attempt is actually the right answer to the question and code snippet (in case the pre-generated answer key index had a bug).
+- If the learner's attempt IS actually right, set learnerWasActuallyCorrect to true and write a 1-sentence confirmation in whyWrong.
+- If the learner's attempt is genuinely wrong, set learnerWasActuallyCorrect to false and explain in 1-2 clear sentences why their specific choice is wrong AND why the actual correct answer is right.`;
+          const usr = `Language: ${lang.name}
+Question: ${ch.prompt}
+Code:
+${codeContext}
+${optionsContext}
+Learner's Attempt: ${userSummary}
+Concept Note: ${ch.explanationAfterAttempt}`;
+          const out = await callGeminiJSON(sys, usr, schema);
+          if (!this.session || !this.session.attemptSubmitted || this.session.lastAttemptCorrect) return;
+
+          if (out?.learnerWasActuallyCorrect) {
+            if (ch.type === "predict_output" && this.session.selectedOption !== null) {
+              ch.correctOptionIndex = this.session.selectedOption;
+            } else if (ch.type === "bug_hunt") {
+              if (this.session.selectedBugLine !== null) ch.buggyLineIndex = this.session.selectedBugLine;
+              if (this.session.selectedOption !== null) ch.correctBugOptionIndex = this.session.selectedOption;
+            }
+            this.overrideMarkCorrect();
+            if (out.whyWrong) {
+              this.session.lastFeedbackText = out.whyWrong;
+              this.renderMainView();
+            }
+          } else if (out?.whyWrong) {
+            this.session.lastFeedbackText = out.whyWrong;
+            this.renderMainView();
+          }
+        } catch (e) {
+          // Keep default explanationAfterAttempt
+        }
+      }
+
+      nextChallenge() {
+        const s = this.session;
+        if (!s) return;
+        const total = s.data.challenges.length;
+        if (s.challengeIndex + 1 < total) {
+          if (this.state.hearts <= 0) {
+            this.openHeartsModal();
+            return;
+          }
+          this.prepareChallengeState(s.challengeIndex + 1);
+          this.renderAll();
+        } else {
+          this.finishLevelSession();
+        }
+      }
+
+      finishLevelSession() {
+        const s = this.session;
+        const total = s.data.challenges.length;
+        const ratio = s.correctCount / total;
+        const pct = Math.round(ratio * 100);
+        const passed = ratio >= CONFIG.passThreshold;
+        const langState = this.getActiveLangState();
+
+        if (passed) {
+          this.sfx.play("levelup");
+          fireConfetti();
+          this.state.xp += 50;
+          const prevBest = langState.completedLevels[s.levelNumber]?.bestScore || 0;
+          langState.completedLevels[s.levelNumber] = {
+            bestScore: Math.max(prevBest, pct),
+            passedAt: Date.now()
+          };
+          if (s.levelNumber < 15 && langState.unlockedUpTo <= s.levelNumber) {
+            langState.unlockedUpTo = s.levelNumber + 1;
+            langState.currentLevel = s.levelNumber + 1;
+          }
+          this.unlockBadge("first_step");
+          if (pct === 100) this.unlockBadge("sharp_eye");
+
+          this.enqueueReviewTopic(s.langId, s.data.levelTitle);
+        }
+
+        s.step = "summary";
+        s.finalPct = pct;
+        s.passed = passed;
+        this.saveState();
+        this.renderAll();
+      }
+
+      renderLevelSummaryStep(s) {
+        const passed = s.passed;
+        return `
+          <div class="max-w-lg mx-auto rounded-3xl bg-slate-900 border ${passed ? 'border-emerald-500/40' : 'border-rose-500/40'} p-7 text-center space-y-5 shadow-2xl animate-pop">
+            <div class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl ${
+              passed ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+            }">
+              <i class="fa-solid ${passed ? 'fa-trophy' : 'fa-rotate-right'}"></i>
+            </div>
+
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider ${passed ? 'text-emerald-400' : 'text-rose-400'}">
+                ${passed ? "Level Complete!" : "80% Needed to Advance"}
+              </span>
+              <h2 class="text-2xl font-extrabold text-white mt-1">
+                You scored ${s.finalPct}% (${s.correctCount}/${s.data.challenges.length})
+              </h2>
+              <p class="text-xs sm:text-sm text-slate-300 mt-1">
+                ${passed
+                  ? `Awesome job! ${s.levelNumber < 15 ? `Level ${s.levelNumber + 1} is now unlocked.` : "You've completed all 15 levels! Ready for the Final Exam?"}`
+                  : "Keep going! Review the lesson or retry with fresh questions to hit 80%."}
+              </p>
+            </div>
+
+            ${s.missedTopics.length > 0 ? `
+              <div class="text-left rounded-2xl bg-slate-950 border border-slate-800 p-4 space-y-1.5">
+                <div class="text-xs font-bold text-amber-400 uppercase">Topics Added to Spaced Repetition</div>
+                <ul class="text-xs text-slate-300 space-y-1">
+                  ${s.missedTopics.map(t => `<li>• ${this.escapeHTML(t)}</li>`).join("")}
+                </ul>
+              </div>
+            ` : ""}
+
+            <div class="flex flex-col sm:flex-row gap-3 pt-2">
+              <button onclick="app.navigate('home')" class="btn-game flex-1 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm">
+                Home Map
+              </button>
+              ${passed && s.levelNumber < 15 ? `
+                <button onclick="app.startLevel(${s.levelNumber + 1})" class="btn-game flex-1 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm">
+                  Start Level ${s.levelNumber + 1} <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+              ` : `
+                <button onclick="app.startLevel(${s.levelNumber})" class="btn-game flex-1 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm">
+                  Retry Level ${s.levelNumber}
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }
+
+      async startQuiz(mode = "placement") {
+        const lang = this.getActiveLanguage();
+        this.currentView = "quiz";
+        this.session = {
+          loading: true,
+          mode,
+          langId: lang.id
+        };
+        this.renderAll();
+
+        const questions = await this.generateQuizQuestions(lang.id, mode);
+        this.session = {
+          loading: false,
+          mode, // 'placement' | 'final_exam'
+          langId: lang.id,
+          questions,
+          index: 0,
+          selectedOption: null,
+          submitted: false,
+          lastCorrect: false,
+          correctCount: 0,
+          highestPassedLevel: 1,
+          missedTopics: [],
+          finished: false
+        };
+        this.renderAll();
+
+        if (lang.executionMode === "pyodide" && Array.isArray(questions)) {
+          questions.forEach(q => this.reconcileQuestionWithPyodide(q));
+        }
+      }
+
+      selectQuizOption(idx) {
+        if (!this.session || this.session.submitted) return;
+        this.session.selectedOption = idx;
+        this.renderMainView();
+      }
+
+      async submitQuizAnswer() {
+        const s = this.session;
+        if (!s || s.selectedOption === null) {
+          this.showToast("Choose an option first!", "amber");
+          return;
+        }
+        const q = s.questions[s.index];
+        if (this.getActiveLanguage().executionMode === "pyodide") {
+          await this.reconcileQuestionWithPyodide(q);
+        }
+        const matchedByText = q.correctAnswerText
+          ? this.findMatchingOptionIndex(q.options, q.correctAnswerText) === s.selectedOption
+          : false;
+        const correct = (s.selectedOption === q.correctOptionIndex) || matchedByText;
+        if (correct) q.correctOptionIndex = s.selectedOption;
+
+        s.submitted = true;
+        s.lastCorrect = correct;
+        if (correct) {
+          this.sfx.play("correct");
+          s.correctCount++;
+          this.state.xp += 15;
+        } else {
+          this.sfx.play("wrong");
+          if (q.topicTag && !s.missedTopics.includes(q.topicTag)) {
+            s.missedTopics.push(q.topicTag);
+          }
+        }
+        this.saveState();
+        this.renderAll();
+      }
+
+      overrideQuizMarkCorrect() {
+        const s = this.session;
+        if (!s || !s.submitted || s.lastCorrect) return;
+        const q = s.questions[s.index];
+        q.correctOptionIndex = s.selectedOption;
+        s.lastCorrect = true;
+        s.correctCount++;
+        this.state.xp += 15;
+        s.missedTopics = s.missedTopics.filter(t => t !== q.topicTag);
+        this.sfx.play("correct");
+        this.showToast("Marked as correct! +15 XP", "emerald", "fa-solid fa-check");
+        this.saveState();
+        this.renderAll();
+      }
+
+      nextQuizQuestion() {
+        const s = this.session;
+        if (!s) return;
+        if (s.index + 1 < s.questions.length) {
+          s.index++;
+          s.selectedOption = null;
+          s.submitted = false;
+          s.lastCorrect = false;
+          this.renderMainView();
+        } else {
+          this.finishQuiz();
+        }
+      }
+
+      finishQuiz() {
+        const s = this.session;
+        s.finished = true;
+        const total = s.questions.length;
+        const ratio = s.correctCount / total;
+        const pct = Math.round(ratio * 100);
+        s.pct = pct;
+
+        const langState = this.getActiveLangState();
+
+        if (s.mode === "placement") {
+          langState.placementTaken = true;
+          this.unlockBadge("placement_pro");
+          const recommendedLevel = Math.max(1, Math.min(15, Math.round(ratio * 14) + 1));
+          s.recommendedLevel = recommendedLevel;
+          langState.unlockedUpTo = Math.max(langState.unlockedUpTo || 1, recommendedLevel);
+          langState.currentLevel = recommendedLevel;
+          for (let i = 1; i < recommendedLevel; i++) {
+            if (!langState.completedLevels[i]) {
+              langState.completedLevels[i] = { bestScore: pct, passedAt: Date.now() };
+            }
+          }
+          fireConfetti();
+        } else {
+          // Final Exam (15 questions, 80% to pass and unlock next language)
+          const passed = ratio >= CONFIG.passThreshold;
+          s.passed = passed;
+          langState.finalExamBestScore = Math.max(langState.finalExamBestScore || 0, pct);
+          if (passed) {
+            langState.finalExamPassed = true;
+            this.unlockBadge("world_conqueror");
+            fireConfetti();
+            this.sfx.play("levelup");
+            const curLang = this.getActiveLanguage();
+            const nextLang = CONFIG.languages.find(l => l.order === curLang.order + 1);
+            if (nextLang && this.state.languages[nextLang.id]) {
+              this.state.languages[nextLang.id].unlocked = true;
+              s.unlockedNextLangName = nextLang.name;
+            }
+          }
+        }
+
+        this.saveState();
+        this.renderAll();
+      }
+
+      renderQuizView() {
+        const s = this.session;
+        const lang = this.getActiveLanguage();
+        if (!s || s.loading) {
+          return `
+            <div class="py-20 text-center space-y-4">
+              <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 mx-auto flex items-center justify-center text-indigo-400 text-2xl animate-spin">
+                <i class="fa-solid fa-circle-notch"></i>
+              </div>
+              <h2 class="text-lg font-bold text-white">
+                Generating ${s?.mode === "placement" ? "10-Question Placement Test" : "15-Question Final Exam"} for ${lang.name}...
+              </h2>
+            </div>
+          `;
+        }
+
+        if (s.finished) {
+          if (s.mode === "placement") {
+            return `
+              <div class="max-w-lg mx-auto rounded-3xl bg-slate-900 border border-indigo-500/40 p-7 text-center space-y-5 animate-pop">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-500/20 text-indigo-400 mx-auto flex items-center justify-center text-3xl">
+                  <i class="fa-solid fa-rocket"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold uppercase text-indigo-400">Placement Complete</span>
+                  <h2 class="text-2xl font-extrabold text-white mt-1">Score: ${s.pct}% (${s.correctCount}/${s.questions.length})</h2>
+                  <p class="text-sm text-slate-300 mt-2">
+                    We've unlocked ${lang.name} up to <strong>Level ${s.recommendedLevel}</strong> so you can start right at your skill edge!
+                  </p>
+                </div>
+                <button onclick="app.startLevel(${s.recommendedLevel})" class="btn-game w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm">
+                  Start at Level ${s.recommendedLevel}
+                </button>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="max-w-lg mx-auto rounded-3xl bg-slate-900 border ${s.passed ? 'border-emerald-500/40' : 'border-rose-500/40'} p-7 text-center space-y-5 animate-pop">
+              <div class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl ${s.passed ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
+                <i class="fa-solid ${s.passed ? 'fa-crown' : 'fa-book-open'}"></i>
+              </div>
+              <div>
+                <span class="text-xs font-bold uppercase ${s.passed ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${s.passed ? `${lang.name} Final Exam Passed!` : "80% Required to Pass"}
+                </span>
+                <h2 class="text-2xl font-extrabold text-white mt-1">${s.pct}% (${s.correctCount}/${s.questions.length})</h2>
+                <p class="text-xs sm:text-sm text-slate-300 mt-1">
+                  ${s.passed
+                    ? `Congratulations! ${s.unlockedNextLangName ? `You unlocked World: ${s.unlockedNextLangName}!` : "You mastered this language!"}`
+                    : "Review the highlighted topics below and retry whenever you're ready."}
+                </p>
+              </div>
+
+              ${s.missedTopics.length > 0 ? `
+                <div class="text-left rounded-2xl bg-slate-950 border border-slate-800 p-4 space-y-1.5">
+                  <div class="text-xs font-bold uppercase text-amber-400">Topics to Review</div>
+                  <ul class="text-xs text-slate-300 space-y-1">
+                    ${s.missedTopics.map(t => `<li>• ${this.escapeHTML(t)}</li>`).join("")}
+                  </ul>
+                </div>
+              ` : ""}
+
+              <div class="flex gap-3">
+                <button onclick="app.navigate('home')" class="btn-game flex-1 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs">
+                  World Map
+                </button>
+                <button onclick="app.startQuiz('final_exam')" class="btn-game flex-1 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs">
+                  Retry Final Exam
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        const q = s.questions[s.index];
+        return `
+          <div class="max-w-2xl mx-auto space-y-5 animate-pop">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <button onclick="app.navigate('levels')" class="hover:text-white"><i class="fa-solid fa-xmark mr-1"></i>Exit</button>
+              <span class="font-bold text-indigo-400 uppercase">${s.mode === "placement" ? "Placement Test" : "Final Exam"} • Q${s.index + 1}/${s.questions.length}</span>
+              <span class="font-mono">Level ${q.levelNumber} Topic</span>
+            </div>
+
+            <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 space-y-5">
+              <h2 class="text-lg font-bold text-white">${this.escapeHTML(q.prompt)}</h2>
+              ${q.codeSnippet ? `
+                <pre class="code-font text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-indigo-200">${this.escapeHTML(q.codeSnippet)}</pre>
+              ` : ""}
+
+              <div class="grid grid-cols-1 gap-2.5">
+                ${q.options.map((opt, idx) => {
+                  let cls = "bg-slate-950 border-slate-800 text-slate-200 hover:border-slate-700";
+                  if (s.submitted) {
+                    if (idx === q.correctOptionIndex) cls = "bg-emerald-950/50 border-emerald-500 text-emerald-200";
+                    else if (idx === s.selectedOption) cls = "bg-rose-950/50 border-rose-500 text-rose-200";
+                  } else if (s.selectedOption === idx) {
+                    cls = "bg-indigo-600/25 border-indigo-500 text-white";
+                  }
+                  return `
+                    <button ${s.submitted ? "disabled" : ""} onclick="app.selectQuizOption(${idx})" class="p-4 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all ${cls}">
+                      ${this.escapeHTML(opt)}
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+
+              ${s.submitted ? `
+                <div class="rounded-xl bg-slate-950 border border-slate-800 p-4 text-xs text-slate-300 space-y-2">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold ${s.lastCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+                      ${s.lastCorrect ? "✓ Correct (+15 XP)" : "✗ Incorrect"}
+                    </span>
+                    ${!s.lastCorrect ? `
+                      <button onclick="app.overrideQuizMarkCorrect()" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-slate-300 hover:text-emerald-300">
+                        ✓ My Answer Was Right
+                      </button>
+                    ` : ""}
+                  </div>
+                  <p>${this.escapeHTML(q.explanation)}</p>
+                </div>
+                <button onclick="app.nextQuizQuestion()" class="btn-game w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm">
+                  ${s.index + 1 < s.questions.length ? "Next Question" : "See Results"}
+                </button>
+              ` : `
+                <button onclick="app.submitQuizAnswer()" class="btn-game w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm">
+                  Submit Answer
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }
+
+      enqueueReviewTopic(langId, topic) {
+        const exists = this.state.reviewDeck.find(r => r.langId === langId && r.topic === topic);
+        if (exists) {
+          exists.box = 1;
+          exists.nextDue = Date.now();
+        } else {
+          this.state.reviewDeck.push({
+            id: `rev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+            langId,
+            topic,
+            box: 1,
+            nextDue: Date.now()
+          });
+        }
+      }
+
+      getDueReviewItems() {
+        const now = Date.now();
+        return this.state.reviewDeck.filter(item => item.nextDue <= now);
+      }
+
+      renderReviewView() {
+        if (this.session && this.session.mode === "review_set") {
+          return this.renderActiveReviewSet(this.session);
+        }
+
+        const activeLang = this.getActiveLanguage();
+        const dueItems = this.getDueReviewItems();
+
+        return `
+          <div class="space-y-6 animate-pop">
+            <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                  <i class="fa-solid fa-rotate mr-1"></i>Spaced Repetition Review
+                </div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-white">Keep Your Neural Pathways Sharp</h1>
+                <p class="text-xs text-slate-400">
+                  Mostly focused on <strong>${activeLang.name}</strong>, mixed with occasional recall questions from any earlier unlocked languages.
+                </p>
+              </div>
+              <button onclick="app.startReviewSet()" class="btn-game px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs sm:text-sm shrink-0 shadow-lg shadow-indigo-600/20">
+                <i class="fa-solid fa-play mr-1.5"></i>Start 4-Card Review Set
+              </button>
+            </div>
+
+            <div class="space-y-3">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-slate-400">
+                Review Deck (${dueItems.length} due now • ${this.state.reviewDeck.length} total cards)
+              </h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${this.state.reviewDeck.map(card => {
+                  const isDue = card.nextDue <= Date.now();
+                  const langObj = CONFIG.languages.find(l => l.id === card.langId) || activeLang;
+                  return `
+                    <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-3">
+                      <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-300 flex items-center justify-center">
+                          <i class="${langObj.icon}"></i>
+                        </div>
+                        <div>
+                          <div class="text-xs font-bold text-white">${this.escapeHTML(card.topic)}</div>
+                          <div class="text-[11px] text-slate-400">${langObj.name} • Leitner Box ${card.box}/5</div>
+                        </div>
+                      </div>
+                      <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        isDue ? "bg-emerald-500/20 text-emerald-300" : "bg-slate-800 text-slate-400"
+                      }">
+                        ${isDue ? "Due Now" : "Scheduled"}
+                      </span>
+                    </div>
+                  `;
+                }).join("")}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      async startReviewSet() {
+        const activeLang = this.getActiveLanguage();
+        const earlierUnlocked = CONFIG.languages.filter(
+          l => l.order < activeLang.order && this.state.languages[l.id]?.unlocked
+        );
+
+        this.session = { mode: "review_set", loading: true };
+        this.renderMainView();
+
+        const sys = `Generate 4 rapid spaced-repetition review multiple-choice questions for CodeQuest.
+3 questions MUST be on ${activeLang.name} (${this.state.reviewDeck.slice(0, 4).map(d => d.topic).join("; ")}).
+${earlierUnlocked.length > 0 ? `1 question MUST be a refresher from an earlier language (${earlierUnlocked.map(l => l.name).join(", ")}).` : `All 4 questions on ${activeLang.name}.`}
+Include correctAnswerText with the exact winning string from options. Keep explanations concise (1 sentence).`;
+
+        const schema = {
+          type: "OBJECT",
+          properties: {
+            questions: {
+              type: "ARRAY",
+              items: {
+                type: "OBJECT",
+                properties: {
+                  languageName: { type: "STRING" },
+                  topic: { type: "STRING" },
+                  prompt: { type: "STRING" },
+                  codeSnippet: { type: "STRING" },
+                  options: { type: "ARRAY", items: { type: "STRING" } },
+                  correctOptionIndex: { type: "INTEGER" },
+                  correctAnswerText: { type: "STRING" },
+                  explanation: { type: "STRING" }
+                },
+                required: ["languageName", "topic", "prompt", "codeSnippet", "options", "correctOptionIndex", "correctAnswerText", "explanation"]
+              }
+            }
+          },
+          required: ["questions"]
+        };
+
+        let questions;
+        try {
+          const res = await callGeminiJSON(sys, "Generate 4 spaced repetition review questions.", schema);
+          questions = this.normalizeQuizQuestions(res.questions);
+        } catch (e) {
+          questions = this.getFallbackQuizQuestions(activeLang, 4).map(q => ({
+            ...q,
+            languageName: activeLang.name,
+            topic: q.topicTag
+          }));
+        }
+
+        this.session = {
+          mode: "review_set",
+          loading: false,
+          questions,
+          index: 0,
+          selectedOption: null,
+          submitted: false,
+          lastCorrect: false,
+          correctCount: 0,
+          done: false
+        };
+        this.renderMainView();
+
+        if (activeLang.executionMode === "pyodide" && Array.isArray(questions)) {
+          questions.forEach(q => this.reconcileQuestionWithPyodide(q));
+        }
+      }
+
+      renderActiveReviewSet(s) {
+        if (s.loading) {
+          return `
+            <div class="py-20 text-center space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 mx-auto flex items-center justify-center text-xl animate-spin">
+                <i class="fa-solid fa-circle-notch"></i>
+              </div>
+              <p class="text-sm font-bold text-white">Assembling your Spaced Repetition set...</p>
+            </div>
+          `;
+        }
+
+        if (s.done) {
+          return `
+            <div class="max-w-md mx-auto rounded-3xl bg-slate-900 border border-emerald-500/40 p-7 text-center space-y-4 animate-pop">
+              <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-brain"></i>
+              </div>
+              <h2 class="text-xl font-extrabold text-white">Review Set Complete! (${s.correctCount}/${s.questions.length})</h2>
+              <p class="text-xs text-slate-300">+30 XP earned and Leitner review intervals updated.</p>
+              <button onclick="app.exitReviewSet()" class="btn-game w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs">
+                Back to Review Deck
+              </button>
+            </div>
+          `;
+        }
+
+        const q = s.questions[s.index];
+        return `
+          <div class="max-w-xl mx-auto space-y-4 animate-pop">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <button onclick="app.exitReviewSet()" class="hover:text-white"><i class="fa-solid fa-arrow-left mr-1"></i>Back</button>
+              <span class="font-bold text-indigo-400">${this.escapeHTML(q.languageName)} • ${this.escapeHTML(q.topic)}</span>
+              <span>Card ${s.index + 1}/${s.questions.length}</span>
+            </div>
+
+            <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 space-y-4">
+              <h3 class="text-base sm:text-lg font-bold text-white">${this.escapeHTML(q.prompt)}</h3>
+              <pre class="code-font text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-2xl p-4 overflow-x-auto text-indigo-200">${this.escapeHTML(q.codeSnippet)}</pre>
+              <div class="grid grid-cols-1 gap-2">
+                ${q.options.map((opt, idx) => {
+                  let cls = "bg-slate-950 border-slate-800 text-slate-200";
+                  if (s.submitted) {
+                    if (idx === q.correctOptionIndex) cls = "bg-emerald-950/50 border-emerald-500 text-emerald-200";
+                    else if (idx === s.selectedOption) cls = "bg-rose-950/50 border-rose-500 text-rose-200";
+                  } else if (s.selectedOption === idx) {
+                    cls = "bg-indigo-600/25 border-indigo-500 text-white";
+                  }
+                  return `
+                    <button ${s.submitted ? "disabled" : ""} onclick="app.selectQuizOption(${idx})" class="p-3.5 rounded-xl border text-left text-xs sm:text-sm font-medium ${cls}">
+                      ${this.escapeHTML(opt)}
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+
+              ${s.submitted ? `
+                <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5 text-xs text-slate-300 space-y-1.5">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold ${s.lastCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+                      ${s.lastCorrect ? "✓ Correct" : "✗ Incorrect"}
+                    </span>
+                    ${!s.lastCorrect ? `
+                      <button onclick="app.overrideReviewMarkCorrect()" class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[11px] font-semibold text-slate-300 hover:text-emerald-300">
+                        ✓ My Answer Was Right
+                      </button>
+                    ` : ""}
+                  </div>
+                  <p>${this.escapeHTML(q.explanation)}</p>
+                </div>
+                <button onclick="app.nextReviewCard()" class="btn-game w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs">
+                  Next Card
+                </button>
+              ` : `
+                <button onclick="app.submitReviewAnswer()" class="btn-game w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs">
+                  Check Recall
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+      }
+
+      async submitReviewAnswer() {
+        const s = this.session;
+        if (!s || s.selectedOption === null) return;
+        const q = s.questions[s.index];
+        if (this.getActiveLanguage().executionMode === "pyodide") {
+          await this.reconcileQuestionWithPyodide(q);
+        }
+        const matchedByText = q.correctAnswerText
+          ? this.findMatchingOptionIndex(q.options, q.correctAnswerText) === s.selectedOption
+          : false;
+        const isRight = (s.selectedOption === q.correctOptionIndex) || matchedByText;
+        if (isRight) q.correctOptionIndex = s.selectedOption;
+
+        s.submitted = true;
+        s.lastCorrect = isRight;
+        if (isRight) {
+          this.sfx.play("correct");
+          s.correctCount++;
+        } else {
+          this.sfx.play("wrong");
+        }
+        this.renderMainView();
+      }
+
+      overrideReviewMarkCorrect() {
+        const s = this.session;
+        if (!s || !s.submitted || s.lastCorrect) return;
+        const q = s.questions[s.index];
+        q.correctOptionIndex = s.selectedOption;
+        s.lastCorrect = true;
+        s.correctCount++;
+        this.sfx.play("correct");
+        this.showToast("Marked as correct!", "emerald", "fa-solid fa-check");
+        this.renderMainView();
+      }
+
+      nextReviewCard() {
+        const s = this.session;
+        if (!s) return;
+        if (s.index + 1 < s.questions.length) {
+          s.index++;
+          s.selectedOption = null;
+          s.submitted = false;
+          s.lastCorrect = false;
+          this.renderMainView();
+        } else {
+          s.done = true;
+          this.state.xp += 30;
+          this.state.daily.reviewSetsDone++;
+          this.state.reviewDeck.forEach(card => {
+            card.box = Math.min(5, card.box + 1);
+            card.nextDue = Date.now() + card.box * 6 * 60 * 60 * 1000;
+          });
+          if (this.isDailyGoalComplete() && !this.state.daily.completedBannerShown) {
+            this.state.daily.completedBannerShown = true;
+            this.unlockBadge("daily_hero");
+          }
+          fireConfetti();
+          this.saveState();
+          this.renderAll();
+        }
+      }
+
+      exitReviewSet() {
+        this.session = null;
+        this.renderAll();
+      }
+
+      renderBadgesView() {
+        return `
+          <div class="space-y-6 animate-pop">
+            <div class="rounded-3xl bg-slate-900 border border-slate-800 p-6 flex items-center justify-between">
+              <div>
+                <h1 class="text-xl sm:text-2xl font-extrabold text-white">Achievements &amp; Player Stats</h1>
+                <p class="text-xs text-slate-400 mt-1">Player Level ${this.getPlayerLevel()} • ${this.state.xp} Total XP • ${this.state.streak}-Day Streak</p>
+              </div>
+              <div class="text-right">
+                <span class="text-2xl font-black text-indigo-400">${this.state.badges.length}/${CONFIG.badges.length}</span>
+                <div class="text-[11px] text-slate-400">Badges Earned</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              ${CONFIG.badges.map(b => {
+                const earned = this.state.badges.includes(b.id);
+                return `
+                  <div class="p-5 rounded-2xl border ${
+                    earned ? "bg-slate-900 border-indigo-500/40" : "bg-slate-900/40 border-slate-800/70 opacity-60"
+                  } flex items-start gap-4">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 ${
+                      earned ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30" : "bg-slate-800 text-slate-500"
+                    }">
+                      <i class="${b.icon}"></i>
+                    </div>
+                    <div>
+                      <h3 class="font-bold text-white text-sm">${b.name}</h3>
+                      <p class="text-xs text-slate-400 mt-0.5">${b.desc}</p>
+                      <span class="inline-block mt-2 text-[10px] font-bold uppercase ${earned ? 'text-emerald-400' : 'text-slate-500'}">
+                        ${earned ? "✓ Unlocked" : "Locked"}
+                      </span>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }
+
+      selectLanguage(langId) {
+        if (!this.state.languages[langId]?.unlocked) {
+          this.promptEarlyUnlock(langId);
+          return;
+        }
+        this.state.activeLangId = langId;
+        this.saveState();
+        this.navigate("levels");
+      }
+
+      promptEarlyUnlock(langId) {
+        const targetLang = CONFIG.languages.find(l => l.id === langId);
+        const curLang = this.getActiveLanguage();
+        if (!targetLang) return;
+
+        this.showModal(`
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-unlock-keyhole"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-extrabold text-white">Unlock ${targetLang.name} Early?</h3>
+                <p class="text-xs text-slate-400">World #${targetLang.order} in the learning path</p>
+              </div>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              Finishing <strong>${curLang.name}</strong> first usually works better so your mental model stays focused on one language at a time—but it's your journey, and you can unlock <strong>${targetLang.name}</strong> right now if you need it.
+            </p>
+            <div class="flex gap-3 pt-2">
+              <button onclick="app.closeModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                Stay on ${curLang.name}
+              </button>
+              <button onclick="app.confirmEarlyUnlock('${targetLang.id}')" class="flex-1 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold">
+                Unlock ${targetLang.name} Now
+              </button>
+            </div>
+          </div>
+        `);
+      }
+
+      confirmEarlyUnlock(langId) {
+        if (this.state.languages[langId]) {
+          this.state.languages[langId].unlocked = true;
+          this.state.languages[langId].earlyUnlocked = true;
+          this.state.activeLangId = langId;
+          this.saveState();
+        }
+        this.closeModal();
+        this.showToast(`${CONFIG.languages.find(l => l.id === langId)?.name} unlocked!`, "amber", "fa-solid fa-unlock");
+        this.navigate("levels");
+      }
+
+      openHeartsModal() {
+        this.showModal(`
+          <div class="space-y-4 text-center">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 mx-auto flex items-center justify-center text-2xl">
+              <i class="fa-solid fa-heart"></i>
+            </div>
+            <h3 class="text-lg font-extrabold text-white">Hearts: ${this.state.hearts} / ${CONFIG.maxHearts}</h3>
+            <p class="text-xs sm:text-sm text-slate-300">
+              Hearts protect your focus and encourage thoughtful attempts. They refill automatically (1 heart every 15 minutes), or you can do a quick recall refill now.
+            </p>
+            <div class="flex gap-3 pt-2">
+              <button onclick="app.closeModal()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                Close
+              </button>
+              ${this.state.hearts < CONFIG.maxHearts ? `
+                <button onclick="app.refillHeartsWithPractice()" class="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold">
+                  Instant Practice Refill (+2 Hearts)
+                </button>
+              ` : ""}
+            </div>
+          </div>
+        `);
+      }
+
+      refillHeartsWithPractice() {
+        this.state.hearts = Math.min(CONFIG.maxHearts, this.state.hearts + 2);
+        if (this.state.hearts >= CONFIG.maxHearts) this.state.lastHeartLostAt = null;
+        this.saveState();
+        this.closeModal();
+        this.updateHeaderStats();
+        this.showToast("+2 Hearts restored! Keep coding.", "emerald", "fa-solid fa-heart");
+      }
+
+      openResetModal() {
+        let savedKey = "";
+        try {
+          savedKey = localStorage.getItem("codequest_custom_api_key") || "";
+        } catch (e) {}
+
+        this.showModal(`
+          <div class="space-y-4 max-h-[82vh] overflow-y-auto pr-1">
+            <h3 class="text-lg font-extrabold text-white">Settings, Sync &amp; Phone Setup</h3>
+            <p class="text-xs text-slate-400">
+              Model in config: <code class="code-font text-indigo-300">${CONFIG.model}</code> • Cached levels: ${Object.keys(this.cache).length}
+            </p>
+
+            <!-- Optional Gemini API Key for standalone exported HTML -->
+            <div class="space-y-1.5 pt-1">
+              <label class="text-xs font-semibold text-slate-300 block">
+                Gemini API Key <span class="text-slate-500 font-normal">(Used when exported on PC or Phone)</span>
+              </label>
+              <div class="flex gap-2">
+                <input
+                  id="custom-api-key-input"
+                  type="password"
+                  value="${this.escapeHTML(savedKey)}"
+                  placeholder="AIzaSy... (leave blank in preview)"
+                  class="flex-1 px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs code-font text-white focus:border-indigo-500 focus:outline-none"
+                />
+                <button onclick="app.saveCustomApiKey()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">
+                  Save
+                </button>
+              </div>
+            </div>
+
+            <!-- Cross-Device Progress Sync (PC <-> Phone) -->
+            <div class="rounded-xl bg-slate-950 border border-slate-800 p-3.5 space-y-2.5">
+              <div class="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <span>Move Progress Between PC &amp; Phone</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                Copy your save code on one device and paste it on another to sync your XP, unlocked levels, and streak.
+              </p>
+              <div class="flex gap-2">
+                <button onclick="app.copySaveCode()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                  <i class="fa-regular fa-copy mr-1"></i>Copy Save Code
+                </button>
+                <button onclick="app.importSaveCode()" class="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-indigo-300 text-xs font-bold">
+                  <i class="fa-solid fa-file-import mr-1"></i>Load Save Code
+                </button>
+              </div>
+              <input
+                id="save-code-input"
+                type="text"
+                placeholder="Paste save code here to restore..."
+                class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs code-font text-slate-200 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+
+            <div class="space-y-2 pt-1">
+              <button onclick="app.clearContentCache()" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold">
+                Clear Cached AI Lessons &amp; Challenges
+              </button>
+              <button onclick="app.resetAllProgress()" class="w-full py-3 rounded-xl bg-rose-950/60 hover:bg-rose-900/70 border border-rose-500/40 text-rose-300 text-xs font-bold">
+                Reset All Game Progress
+              </button>
+            </div>
+            <button onclick="app.closeModal()" class="w-full py-2.5 rounded-xl bg-slate-950 text-slate-400 text-xs font-semibold">
+              Close
+            </button>
+          </div>
+        `);
+      }
+
+      copySaveCode() {
+        try {
+          const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(this.state))));
+          const input = document.getElementById("save-code-input");
+          if (input) {
+            input.value = encoded;
+            input.select();
+            document.execCommand("copy");
+          }
+          this.showToast("Save code copied to clipboard!", "emerald", "fa-solid fa-check");
+        } catch (e) {
+          this.showToast("Could not generate save code.", "rose");
+        }
+      }
+
+      importSaveCode() {
+        const input = document.getElementById("save-code-input");
+        const raw = input?.value?.trim();
+        if (!raw) {
+          this.showToast("Paste your save code into the box first!", "amber");
+          return;
+        }
+        try {
+          const json = decodeURIComponent(escape(atob(raw)));
+          const parsed = JSON.parse(json);
+          if (!parsed || !parsed.languages) throw new Error("Invalid save format");
+          this.state = { ...this.getDefaultState(), ...parsed };
+          this.saveState();
+          this.closeModal();
+          this.renderAll();
+          this.showToast("Progress restored! Welcome back.", "emerald", "fa-solid fa-rotate");
+        } catch (e) {
+          this.showToast("Invalid save code. Please copy it again.", "rose");
+        }
+      }
+
+      saveCustomApiKey() {
+        const input = document.getElementById("custom-api-key-input");
+        if (!input) return;
+        try {
+          const val = input.value.trim();
+          if (val) {
+            localStorage.setItem("codequest_custom_api_key", val);
+            this.showToast("Custom Gemini API key saved!", "emerald", "fa-solid fa-key");
+          } else {
+            localStorage.removeItem("codequest_custom_api_key");
+            this.showToast("Reverted to default environment key.", "indigo", "fa-solid fa-key");
+          }
+        } catch (e) {}
+        this.closeModal();
+      }
+
+      clearContentCache() {
+        this.cache = {};
+        localStorage.removeItem(this.cacheKey);
+        this.closeModal();
+        this.showToast("AI lesson cache cleared!", "indigo");
+        this.renderAll();
+      }
+
+      resetAllProgress() {
+        localStorage.removeItem(this.storageKey);
+        this.state = this.getDefaultState();
+        this.closeModal();
+        this.navigate("home");
+        this.showToast("Progress reset to Level 1.", "rose");
+      }
+
+      showModal(html) {
+        const backdrop = document.getElementById("modal-backdrop");
+        const content = document.getElementById("modal-content");
+        if (!backdrop || !content) return;
+        content.innerHTML = html;
+        backdrop.classList.remove("hidden");
+        backdrop.classList.add("flex");
+      }
+
+      closeModal() {
+        const backdrop = document.getElementById("modal-backdrop");
+        if (!backdrop) return;
+        backdrop.classList.add("hidden");
+        backdrop.classList.remove("flex");
+      }
+    }
+
+    // Boot application on load
+    let app;
+    window.addEventListener("DOMContentLoaded", () => {
+      app = new CodeQuestApp();
+      app.init();
+    });
+  </script>
+</body>
+</html>

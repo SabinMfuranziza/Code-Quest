@@ -1,0 +1,6 @@
+{
+  "appId": "com.sabin.codequest",
+  "appName": "CodeQuest",
+  "webDir": "www",
+  "server": { "androidScheme": "https" }
+}
