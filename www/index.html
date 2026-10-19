@@ -177,6 +177,10 @@
   <!-- Celebration Confetti Canvas -->
   <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-40 hidden"></canvas>
 
+  <script src="bank_js.js"></script>
+  <script src="bank_other.js"></script>
+  <script src="bank_other2.js"></script>
+  <script src="bank.js"></script>
   <script>
     /********************************************************************
      * 1. CENTRALIZED CONFIGURATION (SINGLE SOURCE OF TRUTH)
@@ -1394,6 +1398,7 @@ if not _cq_passed and "==" in ${JSON.stringify(rawAssertion)} and "_stdout" not 
 
       async fetchOrGenerateLevelContent(langId, levelNum, forceRegenerate = false) {
         const cacheId = `${langId}_lvl_${levelNum}`;
+        { const _b = window.CQ_getBank && window.CQ_getBank(langId, levelNum); if (_b) { const _m = CONFIG.languages.find(l => l.id === langId).levels.find(l => l.number === levelNum); _b.levelTitle = _m ? _m.title : ""; return this.normalizeLevelData(_b); } }
         if (!forceRegenerate && this.cache[cacheId]) {
           return this.normalizeLevelData(this.cache[cacheId]);
         }
